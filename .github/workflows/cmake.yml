@@ -1,0 +1,146 @@
+name: CMake
+
+on:
+  push:
+    branches: [ '*' ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Debug
+
+jobs:
+  build_test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        mayo_build_type: [ref, opt, avx2]
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+
+    - name: Install xsltproc
+      run: sudo apt-get install -y xsltproc
+    
+    - name: Install Valgrind
+      run: |
+          sudo apt install valgrind
+          echo "Valgrind installed"
+          
+    - name: Install Valgrind dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install ValgrindCI
+
+    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
+    # You can convert this to a matrix build if you need cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+
+    - name: Configure CMake
+      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }}
+
+    - name: Build
+      # Build your program with the given configuration
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build
+      # Execute tests defined by the CMake configuration.
+      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+      run: ctest -C ${{env.BUILD_TYPE}}
+    
+    - name: Examples (opt/avx2)
+      working-directory: ${{github.workspace}}/build/apps
+      run: |
+          ./PQCgenKAT_sign_mayo_1
+          ./PQCgenKAT_sign_mayo_2
+          ./PQCgenKAT_sign_mayo_3
+          ./PQCgenKAT_sign_mayo_5
+          ./example_mayo_1
+          ./example_mayo_2
+          ./example_mayo_3
+          ./example_mayo_5
+          ./example_nistapi_mayo_1
+          ./example_nistapi_mayo_2
+          ./example_nistapi_mayo_3
+          ./example_nistapi_mayo_5
+      if: matrix.mayo_build_type == 'opt' || matrix.mayo_build_type == 'avx2'
+
+    - name: Examples (ref)
+      working-directory: ${{github.workspace}}/build/apps
+      run: |
+          ./PQCgenKAT_sign_mayo_1
+          ./PQCgenKAT_sign_mayo_2
+          ./PQCgenKAT_sign_mayo_3
+          ./PQCgenKAT_sign_mayo_5
+          ./example_mayo
+          ./example_nistapi_mayo_1
+          ./example_nistapi_mayo_2
+          ./example_nistapi_mayo_3
+          ./example_nistapi_mayo_5
+      if: matrix.mayo_build_type == 'ref'
+  
+    - name: CT-Tests
+      run: |
+          rm -rf build
+          cmake -Bbuild -DENABLE_CT_TESTING=ON -DCMAKE_BUILD_TYPE=Debug -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DMAYO_MARCH="-march=haswell -maes"
+          cmake --build build
+          valgrind --track-origins=yes build/test/mayo_test_scheme_MAYO_1
+          valgrind --track-origins=yes build/test/mayo_test_scheme_MAYO_2
+          valgrind --track-origins=yes build/test/mayo_test_scheme_MAYO_3
+          valgrind --track-origins=yes build/test/mayo_test_scheme_MAYO_5
+      if: matrix.mayo_build_type == 'opt' || matrix.mayo_build_type == 'avx2'
+
+    - name: CT-Tests
+      run: |
+          rm -rf build
+          cmake -Bbuild -DENABLE_CT_TESTING=ON -DCMAKE_BUILD_TYPE=Debug -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DMAYO_MARCH="-march=haswell -maes"
+          cmake --build build
+          valgrind --track-origins=yes build/test/mayo_test_scheme MAYO_1
+          valgrind --track-origins=yes build/test/mayo_test_scheme MAYO_2
+          valgrind --track-origins=yes build/test/mayo_test_scheme MAYO_3
+          valgrind --track-origins=yes build/test/mayo_test_scheme MAYO_5
+      if: matrix.mayo_build_type == 'ref'
+
+    - name: Memcheck
+      run: |
+          rm -rf build
+          cmake -Bbuild -DCMAKE_BUILD_TYPE=Debug -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DMAYO_MARCH="-march=haswell -maes"
+          cmake --build build
+          ctest -T memcheck --test-dir build
+      # valgrind-ci unit_tests_valgrind.xml --summary
+
+    - name: Address Sanitizer ASAN
+      run: |
+          rm -rf build
+          cmake -Bbuild -DCMAKE_BUILD_TYPE=ASAN -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DCMAKE_C_COMPILER=clang
+          cmake --build build
+          ctest -v --test-dir build
+
+    - name: Memory Sanitizer MSAN
+      run: |
+          rm -rf build
+          cmake -Bbuild -DCMAKE_BUILD_TYPE=MSAN -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DCMAKE_C_COMPILER=clang
+          cmake --build build
+          ctest -v --test-dir build
+
+    - name: Leak Sanitizer LSAN
+      run: |
+          rm -rf build
+          cmake -Bbuild -DCMAKE_BUILD_TYPE=LSAN -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DCMAKE_C_COMPILER=clang
+          cmake --build build
+          ctest -v --test-dir build
+
+    - name: Undefined Behavior Sanitizer UBSAN
+      run: |
+          rm -rf build
+          cmake -Bbuild -DCMAKE_BUILD_TYPE=UBSAN -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DCMAKE_C_COMPILER=clang
+          cmake --build build
+          ctest -v --test-dir build

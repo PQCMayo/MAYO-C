@@ -1,0 +1,33 @@
+# CMake & testing
+/build*
+/tmp*
+build/
+build32/
+build64/
+
+doc/*.html
+doc/doc.css
+rust/target
+
+# MSVC
+.vs
+/out*
+.vscode
+
+# Text editors and IDES
+.idea
+tags
+*.swp
+*.pyc
+*.swo
+*~
+.tags*
+
+# CLion
+/cmake-build*
+
+# Misc
+__pycache__
+.pytest_cache
+.cache
+.CMake/a.out
