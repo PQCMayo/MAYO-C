@@ -1,6 +1,6 @@
 # MAYO-C
 
-![MAYO-C workflow](https://github.com/PQCMayo/MAYO-C-imp/actions/workflows/cmake.yml/badge.svg)
+![MAYO-C workflow](https://github.com/PQCMayo/MAYO-C/actions/workflows/cmake.yml/badge.svg)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 MAYO-C is a C library implementation of [MAYO](https://pqmayo.org), a multivariate quadratic signature scheme. It implements the following parameter sets:
@@ -163,7 +163,7 @@ Bibtext:
 @manual{mayo-c,
   title        = {MAYO C implementation},
   author       = {Ward Beullens and Fabio Campos and Sof\'{i}a Celi and Basil Hess and Matthias Kannwischer},
-  note         = {Available at \url{https://github.com/PQCMayo/MAYO-C-imp}. Accessed June, 2023},
+  note         = {Available at \url{https://github.com/PQCMayo/MAYO-C}. Accessed June, 2023},
   month        = jun,
   year         = {2023}
 }
