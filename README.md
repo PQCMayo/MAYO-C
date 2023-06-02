@@ -161,7 +161,7 @@ Bibtext:
 ```
 @manual{mayo-c,
   title        = {MAYO C implementation},
-  author       = {Ward Beullens and Fabio Campos and Sof\'{i}a Celi and Basil Hess and Matthias Kannwischer},
+  author       = {Ward Beullens and Fabio Campos and Sof\'{i}a Celi and Basil Hess and Matthias J. Kannwischer},
   note         = {Available at \url{https://github.com/PQCMayo/MAYO-C}. Accessed June, 2023},
   month        = jun,
   year         = {2023}
