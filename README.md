@@ -5,13 +5,12 @@
 
 MAYO-C is a C library implementation of [MAYO](https://pqmayo.org), a multivariate quadratic signature scheme. It implements the following parameter sets:
 
-| Parameter Set | NIST Security Level | n | m | o | k | q |
-| --- | ---- | -- | -- | -- | -- | -- |
-| MAYO_1 | 1 | 66 | 64 | 8 | 9 | 16 |
-| MAYO_2 | 2 | 78 | 64 | 18 | 4 | 16 |
-| MAYO_3 | 3 | 99 | 96 | 10 | 11 | 16 |
-| MAYO_5 | 5 | 133 | 128 | 12 | 12 | 16 |
-
+| Parameter Set | NIST Security Level | n | m | o | k | q | sk size | pk size | sig size |
+| --- | ---- | -- | -- | -- | -- | -- | -- | -- | -- |
+| MAYO_1 | 1 | 66 | 64 | 8 | 9 | 16 | 24 B | 1168 B | 321 B |
+| MAYO_2 | 1 | 78 | 64 | 18 | 4 | 16 | 24 B | 5488 B | 180 B |
+| MAYO_3 | 3 | 99 | 96 | 10 | 11 | 16 | 32 B | 2656 B | 577 B |
+| MAYO_5 | 5 | 133 | 128 | 12 | 12 | 16 | 40 B | 5008 B | 838 B |
 
 ## Requirements
 
