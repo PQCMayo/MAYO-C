@@ -3,6 +3,10 @@
 ![MAYO-C workflow](https://github.com/PQCMayo/MAYO-C/actions/workflows/cmake.yml/badge.svg)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
+```
+This code is part of a NIST submission for the PQC signatures call.
+```
+
 MAYO-C is a C library implementation of [MAYO](https://pqmayo.org), a multivariate quadratic signature scheme. It implements the following parameter sets:
 
 | Parameter Set | NIST Security Level | n | m | o | k | q | sk size | pk size | sig size |
