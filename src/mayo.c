@@ -418,6 +418,8 @@ int mayo_sign(const mayo_params_t *p, unsigned char *sm,
                param_o);
         if (sample_solution(p, A, y, r, x)) {
             break;
+        } else {
+            memset(bitsliced_M, 0, param_k * param_o * param_m / 8 * sizeof(uint32_t));
         }
     }
 
