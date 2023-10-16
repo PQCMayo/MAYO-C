@@ -21,15 +21,15 @@ if (ENABLE_AESNI)
     target_compile_definitions(mayo_common_test PUBLIC ENABLE_AESNI)
 endif()
 
-set(SOURCE_FILES_MAYO mayo.c params.c bitsliced_arithmetic.c)
+set(SOURCE_FILES_MAYO mayo.c params.c arithmetic.c)
 
 if (${MAYO_BUILD_TYPE} MATCHES "avx2")
+    message("Building for avx2")
     set(INC_PLATFORM ${PROJECT_SOURCE_DIR}/src/AVX2)
     add_definitions(-DMAYO_AVX)
 else()
     set(INC_PLATFORM ${PROJECT_SOURCE_DIR}/src/generic)
 endif()
-
 
 if (ENABLE_PARAMS_DYNAMIC)
     # mayo and mayo_test libraries

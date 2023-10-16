@@ -26,12 +26,12 @@ jobs:
 
     - name: Install xsltproc
       run: sudo apt-get install -y xsltproc
-    
+
     - name: Install Valgrind
       run: |
-          sudo apt install valgrind
+          sudo apt-get update && sudo apt install valgrind
           echo "Valgrind installed"
-          
+
     - name: Install Valgrind dependencies
       run: |
         python -m pip install --upgrade pip
@@ -55,7 +55,7 @@ jobs:
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest -C ${{env.BUILD_TYPE}}
-    
+
     - name: Examples (opt/avx2)
       working-directory: ${{github.workspace}}/build/apps
       run: |
@@ -86,7 +86,7 @@ jobs:
           ./example_nistapi_mayo_3
           ./example_nistapi_mayo_5
       if: matrix.mayo_build_type == 'ref'
-  
+
     - name: CT-Tests
       run: |
           rm -rf build

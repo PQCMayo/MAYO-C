@@ -35,12 +35,18 @@ static void print_hex(const unsigned char *hex, int len) {
 
 
 static int test_mayo(const mayo_params_t *p) {
-    alignas(32) unsigned char pk[CPK_BYTES_MAX] = {0};  
-    alignas(32) unsigned char sk[CSK_BYTES_MAX] = {0};
-    alignas(32) unsigned char sig[5000 + 32] = {0};
+    unsigned char _pk[CPK_BYTES_MAX + 1] = {0};  
+    unsigned char _sk[CSK_BYTES_MAX + 1] = {0};
+    unsigned char _sig[SIG_BYTES_MAX + 32 + 1] = {0};
+    unsigned char _msg[32+1] = { 0 };
+
+    // Enforce unaligned memory addresses
+    unsigned char *pk  = (unsigned char *) ((uintptr_t)_pk | (uintptr_t)1);
+    unsigned char *sk  = (unsigned char *) ((uintptr_t)_sk | (uintptr_t)1);
+    unsigned char *sig = (unsigned char *) ((uintptr_t)_sig | (uintptr_t)1);
+    unsigned char *msg = (unsigned char *) ((uintptr_t)_msg | (uintptr_t)1);
 
     unsigned char seed[48] = { 0 };
-    unsigned char msg[32] = { 0 };
     unsigned long long msglen = 32;
 
     randombytes_init(seed, NULL, 256);

@@ -99,7 +99,7 @@ static int bench_sig(const mayo_params_t *p, int runs, int csv) {
     unsigned char *pk  = calloc(p->cpk_bytes, 1);
     unsigned char *epk  = calloc(p->epk_bytes, 1);
     unsigned char *sk  = calloc(p->csk_bytes, 1);
-    unsigned char *esk  = calloc(p->esk_bytes, 1);
+    sk_t *esk  = calloc(sizeof(sk_t), 1);
     unsigned char *sig = calloc(p->sig_bytes + m_len, 1);
     unsigned char *m   = calloc(m_len, 1);
     unsigned long long len = p->sig_bytes;
@@ -135,6 +135,8 @@ static int bench_sig(const mayo_params_t *p, int runs, int csv) {
         printf("\n");
     }
 
+    free(esk);
+    free(epk);
     free(pk);
     free(sk);
     free(sig);

@@ -1090,13 +1090,3 @@ void sha3_512(uint8_t *output, const uint8_t *input, size_t inlen) {
         output[i] = t[i];
     }
 }
-
-int SHAKE128(unsigned char *output, size_t outputByteLen, const unsigned char *input, size_t inputByteLen) {
-    shake128(output, outputByteLen, input, inputByteLen);
-    return 0;
-}
-
-int SHAKE256(unsigned char *output, size_t outputByteLen, const unsigned char *input, size_t inputByteLen) {
-    shake256(output, outputByteLen, input, inputByteLen);
-    return 0;
-}

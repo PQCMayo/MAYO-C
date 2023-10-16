@@ -106,4 +106,60 @@ static inline void mat_add(const unsigned char *a, const unsigned char *b,
     }
 }
 
+static
+inline void m_vec_copy(int m_legs, const uint32_t *in,
+                                 uint32_t *out) {
+    for (int i = 0; i < m_legs * 4; i++) {
+        out[i] = in[i];
+    }
+}
+
+static
+inline void m_vec_add(int m_legs, const uint32_t *in,
+                                uint32_t *acc) {
+    for (int i = 0; i < m_legs * 4; i++) {
+        acc[i] ^= in[i];
+    }
+}
+
+// This implements arithmetic for nibble-packed vectors of m field elements in Z_2[x]/(x^4+x+1)
+// gf16 := gf2[x]/(x^4+x+1)
+
+static inline uint32_t gf16v_mul_u32(uint32_t a, uint8_t b) {
+    uint32_t a_msb;
+    uint32_t a32 = a;
+    uint32_t b32 = b;
+    uint32_t r32 = a32 * (b32 & 1);
+
+    a_msb = a32 & 0x88888888; // MSB, 3rd bits
+    a32 ^= a_msb;   // clear MSB
+    a32 = (a32 << 1) ^ ((a_msb >> 3) * 3);
+    r32 ^= (a32) * ((b32 >> 1) & 1);
+
+    a_msb = a32 & 0x88888888; // MSB, 3rd bits
+    a32 ^= a_msb;   // clear MSB
+    a32 = (a32 << 1) ^ ((a_msb >> 3) * 3);
+    r32 ^= (a32) * ((b32 >> 2) & 1);
+
+    a_msb = a32 & 0x88888888; // MSB, 3rd bits
+    a32 ^= a_msb;   // clear MSB
+    a32 = (a32 << 1) ^ ((a_msb >> 3) * 3);
+    r32 ^= (a32) * ((b32 >> 3) & 1);
+
+    return r32;
+
+}
+ 
+static inline void m_vec_mul_add(int m_legs, const uint32_t *in, unsigned char a, uint32_t *acc) {
+    for(int i=0; i < m_legs * 4;i++){
+        acc[i] ^= gf16v_mul_u32(in[i], a);        
+    }
+}
+
+static inline void m_vec_mul_add_x(int m_legs, const uint32_t *in, uint32_t *acc) {
+    for(int i=0;i<m_legs*4;i++){
+        acc[i] ^= gf16v_mul_u32(in[i], 0x2);
+    }
+}
+
 #endif

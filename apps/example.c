@@ -31,7 +31,7 @@ static int example_mayo(const mayo_params_t* p) {
     unsigned char *sk  = calloc(p->csk_bytes, 1);
 
     unsigned char *epk = calloc(p->epk_bytes, 1);
-    unsigned char *esk = calloc(p->esk_bytes, 1);
+    sk_t *esk = calloc(sizeof(sk_t), 1);
 
     unsigned char *sig = calloc(p->sig_bytes + msglen, 1);
 
@@ -92,7 +92,7 @@ static int example_mayo(const mayo_params_t* p) {
     }
 
     printf("mayo_verify (with correct signature) -> ");
-    res = mayo_verify(p, msg, msglen, sig, p->sig_bytes, pk);
+    res = mayo_verify(p, msg, msglen, sig, pk);
     if (res != MAYO_OK) {
         printf("FAIL\n");
         res = -1;
@@ -116,7 +116,7 @@ static int example_mayo(const mayo_params_t* p) {
     }
 
     printf("mayo_verify (with altered signature) -> ");
-    res = mayo_verify(p, msg, msglen, sig, p->sig_bytes, pk);
+    res = mayo_verify(p, msg, msglen, sig, pk);
     if (res == MAYO_OK) {
         printf("FAIL\n");
         res = -1;
@@ -130,7 +130,7 @@ err:
     free(pk);
     free(epk);
     mayo_secure_free(sk, p->csk_bytes);
-    mayo_secure_free(esk, p->esk_bytes);
+    mayo_secure_free(esk, sizeof(sk_t));
     free(sig);
     return res;
 }
