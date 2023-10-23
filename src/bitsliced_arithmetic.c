@@ -7,6 +7,10 @@
 #include <simple_arithmetic.h>
 #include <echelon_form.h>
 
+#ifdef ENABLE_CT_TESTING
+#include <valgrind/memcheck.h>
+#endif
+
 
 // This implements arithmetic for bitsliced vectors of m field elements in Z_2[x]/(x^4+x+1)
 // A bitsliced vector is consists of m/32 * 4 consecutive uint32_t's
