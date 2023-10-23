@@ -10,7 +10,7 @@
 
 // P1*0 -> P1: v x v, O: v x o
 static 
-inline void mayo_12_P1_times_O_avx2(const uint32_t *_P1, __m256i *O_multabs, uint32_t *_acc){
+inline void mayo_12_P1_times_O_avx2(const uint64_t *_P1, __m256i *O_multabs, uint64_t *_acc){
 
     const __m256i *P1 = (__m256i *) _P1;
     __m256i *acc = (__m256i *) _acc;
@@ -47,7 +47,7 @@ inline void mayo_12_P1_times_O_avx2(const uint32_t *_P1, __m256i *O_multabs, uin
 
 
 static 
-inline void mayo_12_Ot_times_P1O_P2_avx2(const uint32_t *_P1O_P2, __m256i *O_multabs, uint32_t *_acc){
+inline void mayo_12_Ot_times_P1O_P2_avx2(const uint64_t *_P1O_P2, __m256i *O_multabs, uint64_t *_acc){
 
     const __m256i *P1O_P2 = (__m256i *) _P1O_P2;
     __m256i *acc = (__m256i *) _acc;
@@ -81,7 +81,7 @@ inline void mayo_12_Ot_times_P1O_P2_avx2(const uint32_t *_P1O_P2, __m256i *O_mul
 }
 
 static
-inline void mayo_12_P1P1t_times_O(const uint32_t *_P1, const unsigned char *O, uint32_t *_acc){
+inline void mayo_12_P1P1t_times_O(const uint64_t *_P1, const unsigned char *O, uint64_t *_acc){
 
     const __m256i *P1 = (__m256i *) _P1;
     __m256i *acc = (__m256i *) _acc;
@@ -140,7 +140,7 @@ inline void mayo_12_P1P1t_times_O(const uint32_t *_P1, const unsigned char *O, u
 
 
 static 
-inline void mayo_12_Vt_times_L_avx2(const uint32_t *_L, const __m256i *V_multabs, uint32_t *_acc){
+inline void mayo_12_Vt_times_L_avx2(const uint64_t *_L, const __m256i *V_multabs, uint64_t *_acc){
 
     const __m256i *L = (__m256i *) _L;
     __m256i *acc = (__m256i *) _acc;
@@ -180,7 +180,7 @@ inline void mayo_12_Vt_times_L_avx2(const uint32_t *_L, const __m256i *V_multabs
 
 
 static 
-inline void mayo_12_Vt_times_Pv_avx2(const uint32_t *_Pv, const __m256i *V_multabs, uint32_t *_acc){
+inline void mayo_12_Vt_times_Pv_avx2(const uint64_t *_Pv, const __m256i *V_multabs, uint64_t *_acc){
 
     const __m256i *Pv = (__m256i *) _Pv;
     __m256i *acc = (__m256i *) _acc;
@@ -219,7 +219,7 @@ inline void mayo_12_Vt_times_Pv_avx2(const uint32_t *_Pv, const __m256i *V_multa
 }
 
 static 
-inline void mayo_12_P1_times_Vt_avx2(const uint32_t *_P1, __m256i *V_multabs, uint32_t *_acc){
+inline void mayo_12_P1_times_Vt_avx2(const uint64_t *_P1, __m256i *V_multabs, uint64_t *_acc){
     size_t k,c;
     const __m256i *P1 = (__m256i *) _P1;
     __m256i *acc = (__m256i *) _acc;
@@ -262,17 +262,17 @@ inline void mayo_12_P1_times_Vt_avx2(const uint32_t *_P1, __m256i *V_multabs, ui
 // P1*S1 -> P1: v x v, S1: v x k // P1 upper triangular
 // same as mayo_12_P1_times_Vt_avx2
 static
-inline void mayo_12_P1_times_S1_avx2(const uint32_t *_P1, __m256i *S1_multabs, uint32_t *_acc){
+inline void mayo_12_P1_times_S1_avx2(const uint64_t *_P1, __m256i *S1_multabs, uint64_t *_acc){
     mayo_12_P1_times_Vt_avx2(_P1, S1_multabs, _acc);
 }
 
 static
-inline void mayo_12_S1t_times_PS1_avx2(const uint32_t *_PS1, __m256i *S1_multabs, uint32_t *_acc){
+inline void mayo_12_S1t_times_PS1_avx2(const uint64_t *_PS1, __m256i *S1_multabs, uint64_t *_acc){
     mayo_12_Vt_times_Pv_avx2(_PS1, S1_multabs, _acc);
 }
 
 static
-inline void mayo_12_S2t_times_PS2_avx2(const uint32_t *_PS2, __m256i *S2_multabs, uint32_t *_acc){
+inline void mayo_12_S2t_times_PS2_avx2(const uint64_t *_PS2, __m256i *S2_multabs, uint64_t *_acc){
     const __m256i *PS2 = (__m256i *) _PS2;
     __m256i *acc = (__m256i *) _acc;
     const __m256i low_nibble_mask  = _mm256_set_epi64x(0x0f0f0f0f0f0f0f0f, 0x0f0f0f0f0f0f0f0f, 0x0f0f0f0f0f0f0f0f, 0x0f0f0f0f0f0f0f0f);
@@ -312,7 +312,7 @@ inline void mayo_12_S2t_times_PS2_avx2(const uint32_t *_PS2, __m256i *S2_multabs
 
 // P2*S2 -> P2: v x o, S2: o x k
 static 
-inline void mayo_12_P2_times_S2_avx2(const uint32_t *_P2, __m256i *S2_multabs, uint32_t *_acc){
+inline void mayo_12_P2_times_S2_avx2(const uint64_t *_P2, __m256i *S2_multabs, uint64_t *_acc){
     size_t k,c;
     const __m256i *P2 = (__m256i *) _P2;
     __m256i *acc = (__m256i *) _acc;
@@ -355,7 +355,7 @@ inline void mayo_12_P2_times_S2_avx2(const uint32_t *_P2, __m256i *S2_multabs, u
 
 // P2*S2 -> P2: v x o, S2: o x k
 static 
-inline void mayo_12_P1_times_S1_plus_P2_times_S2_avx2(const uint32_t *_P1, const uint32_t *_P2, __m256i *S1_multabs, __m256i *S2_multabs, uint32_t *_acc){
+inline void mayo_12_P1_times_S1_plus_P2_times_S2_avx2(const uint64_t *_P1, const uint64_t *_P2, __m256i *S1_multabs, __m256i *S2_multabs, uint64_t *_acc){
     size_t k,c;
     const __m256i *P1 = (__m256i *) _P1;
     const __m256i *P2 = (__m256i *) _P2;
@@ -414,7 +414,7 @@ inline void mayo_12_P1_times_S1_plus_P2_times_S2_avx2(const uint32_t *_P1, const
 
 // P3*S2 -> P3: o x o, S2: o x k // P3 upper triangular
 static 
-inline void mayo_12_P3_times_S2_avx2(const uint32_t *_P3, __m256i *S2_multabs, uint32_t *_acc){
+inline void mayo_12_P3_times_S2_avx2(const uint64_t *_P3, __m256i *S2_multabs, uint64_t *_acc){
     size_t k,c;
     const __m256i *P3 = (__m256i *) _P3;
     __m256i *acc = (__m256i *) _acc;
@@ -456,19 +456,19 @@ inline void mayo_12_P3_times_S2_avx2(const uint32_t *_P3, __m256i *S2_multabs, u
 
 
 static inline
-void mayo12_m_upper(int m_legs, const uint32_t *in, uint32_t *out, int size) {
+void mayo12_m_upper(int m_legs, const uint64_t *in, uint64_t *out, int size) {
     (void) size;
     int m_vecs_stored = 0;
 
     for (int r = 0; r < O_MAX; ++r) {
-        const __m256i* _in = (const __m256i*) (in + m_legs * 4 * (r * size + r));
-        __m256i* _out = (__m256i*) (out + m_legs * 4 * m_vecs_stored);
+        const __m256i* _in = (const __m256i*) (in + m_legs * 2 * (r * size + r));
+        __m256i* _out = (__m256i*) (out + m_legs * 2 * m_vecs_stored);
         _out[0] = _in[0];
         m_vecs_stored++;
         for (int c = r + 1; c < O_MAX; ++c) {
-            const __m256i* _in2 = (const __m256i*) (in + m_legs * 4 * (r * size + c));
-            const __m256i* _in3 = (const __m256i*) (in + m_legs * 4 * (c * size + r));
-            _out = (__m256i*) (out + m_legs * 4 * m_vecs_stored);
+            const __m256i* _in2 = (const __m256i*) (in + m_legs * 2 * (r * size + c));
+            const __m256i* _in3 = (const __m256i*) (in + m_legs * 2 * (c * size + r));
+            _out = (__m256i*) (out + m_legs * 2 * m_vecs_stored);
             _out[0] = _in2[0] ^ _in3[0];
             m_vecs_stored++;
         }

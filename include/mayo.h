@@ -205,7 +205,7 @@ typedef struct {
 } mayo_params_t;
 
 typedef struct sk_t {
-    uint32_t p[P1_BYTES_MAX/4 + P2_BYTES_MAX/4];
+    uint64_t p[P1_BYTES_MAX/8 + P2_BYTES_MAX/8];
     uint8_t o[O_BYTES_MAX];
 } sk_t;
 

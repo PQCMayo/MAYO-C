@@ -18,9 +18,21 @@ static inline uint32_t ct_is_greater_than(int a, int b) {
     return (uint32_t) (diff >> (8*sizeof(uint32_t)-1));
 }
 
+// a > b -> b - a is negative
+// returns 0xFFFFFFFF if true, 0x00000000 if false
+static inline uint64_t ct_64_is_greater_than(int a, int b) {
+    int64_t diff = ((int64_t) b) - ((int64_t) a);
+    return (uint64_t) (diff >> (8*sizeof(uint64_t)-1));
+}
+
 // if a == b -> 0x00000000, else 0xFFFFFFFF
 static inline uint32_t ct_compare_32(int a, int b) {
     return (uint32_t)((-(int32_t)(a ^ b)) >> (8*sizeof(uint32_t)-1));
+}
+
+// if a == b -> 0x0000000000000000, else 0xFFFFFFFFFFFFFFFF
+static inline uint64_t ct_compare_64(int a, int b) {
+    return (uint64_t)((-(int64_t)(a ^ b)) >> (8*sizeof(uint64_t)-1));
 }
 
 // if a == b -> 0x00, else 0xFF

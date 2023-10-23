@@ -62,10 +62,7 @@ inline void vec_mul_add_96(const uint64_t *in, unsigned char a, uint64_t *acc) {
 }
 
 static 
-inline void multiply_bins_96(uint32_t *bins_32, uint32_t *out_32) {
-
-    uint64_t *bins = (uint64_t *) bins_32;
-    uint64_t *out = (uint64_t *) out_32;
+inline void multiply_bins_96(uint64_t *bins, uint64_t *out) {
 
     m_vec_mul_add_x_inv_96(bins +  5 * 6, bins +  10 * 6);
     m_vec_mul_add_x_96(bins + 11 * 6, bins + 12 * 6);

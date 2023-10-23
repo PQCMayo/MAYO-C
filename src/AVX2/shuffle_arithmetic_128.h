@@ -12,7 +12,7 @@
 
 // P1*0 -> P1: v x v, O: v x o
 static 
-inline void mayo_5_P1_times_O_avx2(const uint32_t *_P1, __m256i *O_multabs, uint32_t *_acc){
+inline void mayo_5_P1_times_O_avx2(const uint64_t *_P1, __m256i *O_multabs, uint64_t *_acc){
 
     const __m256i *P1 = (__m256i *) _P1;
     __m256i *acc = (__m256i *) _acc;
@@ -57,7 +57,7 @@ inline void mayo_5_P1_times_O_avx2(const uint32_t *_P1, __m256i *O_multabs, uint
 }
 
 static 
-inline void mayo_5_Ot_times_P1O_P2_avx2(const uint32_t *_P1O_P2, __m256i *O_multabs, uint32_t *_acc){
+inline void mayo_5_Ot_times_P1O_P2_avx2(const uint64_t *_P1O_P2, __m256i *O_multabs, uint64_t *_acc){
     const __m256i *P1O_P2 = (__m256i *) _P1O_P2;
     __m256i *acc = (__m256i *) _acc;
     const __m256i low_nibble_mask  = _mm256_set_epi64x(0x0f0f0f0f0f0f0f0f, 0x0f0f0f0f0f0f0f0f, 0x0f0f0f0f0f0f0f0f, 0x0f0f0f0f0f0f0f0f);
@@ -99,7 +99,7 @@ inline void mayo_5_Ot_times_P1O_P2_avx2(const uint32_t *_P1O_P2, __m256i *O_mult
 
 
 static
-inline void mayo_5_P1P1t_times_O(const uint32_t *_P1, const unsigned char *O, uint32_t *_acc){
+inline void mayo_5_P1P1t_times_O(const uint64_t *_P1, const unsigned char *O, uint64_t *_acc){
 
     const __m256i *P1 = (__m256i *) _P1;
     __m256i *acc = (__m256i *) _acc;
@@ -175,7 +175,7 @@ inline void mayo_5_P1P1t_times_O(const uint32_t *_P1, const unsigned char *O, ui
 
 
 static 
-inline void mayo_5_Vt_times_L_avx2(const uint32_t *_L, const __m256i *V_multabs, uint32_t *_acc){
+inline void mayo_5_Vt_times_L_avx2(const uint64_t *_L, const __m256i *V_multabs, uint64_t *_acc){
 
     const __m256i *L = (__m256i *) _L;
     __m256i *acc = (__m256i *) _acc;
@@ -227,7 +227,7 @@ inline void mayo_5_Vt_times_L_avx2(const uint32_t *_L, const __m256i *V_multabs,
 
 
 static 
-inline void mayo_5_P1_times_Vt_avx2(const uint32_t *_P1, __m256i *V_multabs, uint32_t *_acc){
+inline void mayo_5_P1_times_Vt_avx2(const uint64_t *_P1, __m256i *V_multabs, uint64_t *_acc){
     size_t k,c;
     const __m256i *P1 = (__m256i *) _P1;
     __m256i *acc = (__m256i *) _acc;
@@ -280,7 +280,7 @@ inline void mayo_5_P1_times_Vt_avx2(const uint32_t *_P1, __m256i *V_multabs, uin
 }
 
 static 
-inline void mayo_5_Vt_times_Pv_avx2(const uint32_t *_Pv, const __m256i *V_multabs, uint32_t *_acc){
+inline void mayo_5_Vt_times_Pv_avx2(const uint64_t *_Pv, const __m256i *V_multabs, uint64_t *_acc){
 
     const __m256i *Pv = (__m256i *) _Pv;
     __m256i *acc = (__m256i *) _acc;
@@ -333,7 +333,7 @@ inline void mayo_5_Vt_times_Pv_avx2(const uint32_t *_Pv, const __m256i *V_multab
 
 // P2*S2 -> P2: v x o, S2: o x k
 static 
-inline void mayo_5_P1_times_S1_plus_P2_times_S2_avx2(const uint32_t *_P1, const uint32_t *_P2, __m256i *S1_multabs, __m256i *S2_multabs, uint32_t *_acc){
+inline void mayo_5_P1_times_S1_plus_P2_times_S2_avx2(const uint64_t *_P1, const uint64_t *_P2, __m256i *S1_multabs, __m256i *S2_multabs, uint64_t *_acc){
     size_t k,c;
     const __m256i *P1 = (__m256i *) _P1;
     const __m256i *P2 = (__m256i *) _P2;
@@ -410,7 +410,7 @@ inline void mayo_5_P1_times_S1_plus_P2_times_S2_avx2(const uint32_t *_P1, const 
 
 // P3*S2 -> P3: o x o, S2: o x k // P3 upper triangular
 static 
-inline void mayo_5_P3_times_S2_avx2(const uint32_t *_P3, __m256i *S2_multabs, uint32_t *_acc){
+inline void mayo_5_P3_times_S2_avx2(const uint64_t *_P3, __m256i *S2_multabs, uint64_t *_acc){
     size_t k,c;
     const __m256i *P3 = (__m256i *) _P3;
     __m256i *acc = (__m256i *) _acc;
@@ -464,12 +464,12 @@ inline void mayo_5_P3_times_S2_avx2(const uint32_t *_P3, __m256i *S2_multabs, ui
 
 
 static
-inline void mayo_5_S1t_times_PS1_avx2(const uint32_t *_PS1, __m256i *S1_multabs, uint32_t *_acc){
+inline void mayo_5_S1t_times_PS1_avx2(const uint64_t *_PS1, __m256i *S1_multabs, uint64_t *_acc){
     mayo_5_Vt_times_Pv_avx2(_PS1, S1_multabs, _acc);
 }
 
 static
-inline void mayo_5_S2t_times_PS2_avx2(const uint32_t *_PS2, __m256i *S2_multabs, uint32_t *_acc){
+inline void mayo_5_S2t_times_PS2_avx2(const uint64_t *_PS2, __m256i *S2_multabs, uint64_t *_acc){
     const __m256i *PS2 = (__m256i *) _PS2;
     __m256i *acc = (__m256i *) _acc;
     const __m256i low_nibble_mask  = _mm256_set_epi64x(0x0f0f0f0f0f0f0f0f, 0x0f0f0f0f0f0f0f0f, 0x0f0f0f0f0f0f0f0f, 0x0f0f0f0f0f0f0f0f);

@@ -107,17 +107,17 @@ static inline void mat_add(const unsigned char *a, const unsigned char *b,
 }
 
 static
-inline void m_vec_copy(int m_legs, const uint32_t *in,
-                                 uint32_t *out) {
-    for (int i = 0; i < m_legs * 4; i++) {
+inline void m_vec_copy(int m_legs, const uint64_t *in,
+                                 uint64_t *out) {
+    for (int i = 0; i < m_legs * 2; i++) {
         out[i] = in[i];
     }
 }
 
 static
-inline void m_vec_add(int m_legs, const uint32_t *in,
-                                uint32_t *acc) {
-    for (int i = 0; i < m_legs * 4; i++) {
+inline void m_vec_add(int m_legs, const uint64_t *in,
+                                uint64_t *acc) {
+    for (int i = 0; i < m_legs * 2; i++) {
         acc[i] ^= in[i];
     }
 }
@@ -150,15 +150,15 @@ static inline uint32_t gf16v_mul_u32(uint32_t a, uint8_t b) {
 
 }
  
-static inline void m_vec_mul_add(int m_legs, const uint32_t *in, unsigned char a, uint32_t *acc) {
-    for(int i=0; i < m_legs * 4;i++){
-        acc[i] ^= gf16v_mul_u32(in[i], a);        
+static inline void m_vec_mul_add(int m_legs, const uint64_t *in, unsigned char a, uint64_t *acc) {
+    for(int i=0; i < m_legs*2;i++){
+        acc[i] ^= gf16v_mul_u64(in[i], a);        
     }
 }
 
-static inline void m_vec_mul_add_x(int m_legs, const uint32_t *in, uint32_t *acc) {
-    for(int i=0;i<m_legs*4;i++){
-        acc[i] ^= gf16v_mul_u32(in[i], 0x2);
+static inline void m_vec_mul_add_x(int m_legs, const uint64_t *in, uint64_t *acc) {
+    for(int i=0;i<m_legs*2;i++){
+        acc[i] ^= gf16v_mul_u64(in[i], 0x2);
     }
 }
 

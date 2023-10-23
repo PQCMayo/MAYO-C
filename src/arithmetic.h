@@ -85,22 +85,22 @@ static const unsigned char f_tail[] = PARAM_NAME(f_tail);
 #endif
 
 // Calculate P3 = O^T * (P1*O + P2) in KeyGen
-void Ot_times_P1O_P2(const mayo_params_t* p, const uint32_t* P1, const unsigned char* O, uint32_t* P1O_P2, uint32_t* P3);
+void Ot_times_P1O_P2(const mayo_params_t* p, const uint64_t* P1, const unsigned char* O, uint64_t* P1O_P2, uint64_t* P3);
 
 // Calculate Upper in KeyGen
-void m_upper(int m_legs, const uint32_t *in, uint32_t *out, int size);
+void m_upper(int m_legs, const uint64_t *in, uint64_t *out, int size);
 
 // Calculate acc = (P1+P1^T)*O in expand_sk
-void P1P1t_times_O(const mayo_params_t* p, const uint32_t* P1P1t, const unsigned char* O, uint32_t* acc);
+void P1P1t_times_O(const mayo_params_t* p, const uint64_t* P1P1t, const unsigned char* O, uint64_t* acc);
 
 // Calculate M=V*L and Y=V*P1*V^T in Sign
-void V_times_L__V_times_P1_times_Vt(const mayo_params_t* p, const uint32_t* L, const unsigned char* V, uint32_t* M, const uint32_t* P1, uint32_t* Y);
+void V_times_L__V_times_P1_times_Vt(const mayo_params_t* p, const uint64_t* L, const unsigned char* V, uint64_t* M, const uint64_t* P1, uint64_t* Y);
 
 // Sample solution in Sign
 int sample_solution(const mayo_params_t *p, unsigned char *A, const unsigned char *y, const unsigned char *r, unsigned char *x, int k, int o, int m, int A_cols);
 
 // Calculate SPS = S*P*S^T in Verify
-void m_calculate_PS_SPS(const uint32_t *P1, const uint32_t *P2, const uint32_t *P3, const unsigned char *S,
-                              const int m, const int v, const int o, const int k, uint32_t *SPS);
+void m_calculate_PS_SPS(const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, const unsigned char *S,
+                              const int m, const int v, const int o, const int k, uint64_t *SPS);
 
 #endif

@@ -72,6 +72,19 @@ inline void vec_mul_add_64(const uint64_t *in, unsigned char a, uint64_t *acc) {
     }
 }
 
+static 
+inline void vec_mul_add_u64(const int legs, const uint64_t *in, unsigned char a, uint64_t *acc) {
+    uint32_t tab = mul_table(a);
+
+    uint64_t lsb_ask = 0x1111111111111111ULL;
+
+    for(int i=0; i < legs; i++){
+        acc[i] ^= ( in[i]       & lsb_ask) * (tab & 0xff)
+                ^ ((in[i] >> 1) & lsb_ask) * ((tab >> 8)  & 0xf)
+                ^ ((in[i] >> 2) & lsb_ask) * ((tab >> 16) & 0xf)
+                ^ ((in[i] >> 3) & lsb_ask) * ((tab >> 24) & 0xf);
+    }
+}
 
 inline
 static void m_vec_mul_add_x_64(const uint64_t *in, uint64_t *acc) {
@@ -92,10 +105,7 @@ static void m_vec_mul_add_x_inv_64(const uint64_t *in, uint64_t *acc) {
 }
 
 static 
-inline void multiply_bins_64(uint32_t *bins_32, uint32_t *out_32) {
-
-    uint64_t *bins = (uint64_t *) bins_32;
-    uint64_t *out = (uint64_t *) out_32;
+inline void multiply_bins_64(uint64_t *bins, uint64_t *out) {
 
     m_vec_mul_add_x_inv_64(bins +  5 * 4, bins +  10 * 4);
     m_vec_mul_add_x_64(bins + 11 * 4, bins + 12 * 4);
