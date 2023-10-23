@@ -10,7 +10,7 @@ You are solely responsible for determining the appropriateness of using and dist
 
 #include <string.h>
 
-#include <aes.h>
+#include <aes_ctr.h>
 
 #ifdef ENABLE_CT_TESTING
 #include <valgrind/memcheck.h>

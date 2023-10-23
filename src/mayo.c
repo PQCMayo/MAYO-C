@@ -3,10 +3,9 @@
 #include <mem.h>
 #include <mayo.h>
 #include <rng.h>
-#include <aes.h>
+#include <aes_ctr.h>
 #include <bitsliced_arithmetic.h>
 #include <simple_arithmetic.h>
-#include <echelon_form.h>
 #include <fips202.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,62 +15,6 @@
 #endif
 
 #define PK_PRF AES_128_CTR
-
-#ifdef ENABLE_PARAMS_DYNAMIC
-#define PARAM_m(p) (p->m)
-#define PARAM_n(p) (p->n)
-#define PARAM_o(p) (p->o)
-#define PARAM_v(p) (p->n - p->o)
-#define PARAM_A_cols(p) (p->k * p->o + 1)
-#define PARAM_k(p) (p->k)
-#define PARAM_q(p) (p->q)
-#define PARAM_m_bytes(p) (p->m_bytes)
-#define PARAM_O_bytes(p) (p->O_bytes)
-#define PARAM_v_bytes(p) (p->v_bytes)
-#define PARAM_r_bytes(p) (p->r_bytes)
-#define PARAM_P1_bytes(p) (p->P1_bytes)
-#define PARAM_P2_bytes(p) (p->P2_bytes)
-#define PARAM_P3_bytes(p) (p->P3_bytes)
-#define PARAM_csk_bytes(p) (p->csk_bytes)
-#define PARAM_esk_bytes(p) (p->esk_bytes)
-#define PARAM_cpk_bytes(p) (p->cpk_bytes)
-#define PARAM_epk_bytes(p) (p->epk_bytes)
-#define PARAM_sig_bytes(p) (p->sig_bytes)
-#define PARAM_f_tail(p) (p->f_tail)
-#define PARAM_salt_bytes(p) (p->salt_bytes)
-#define PARAM_sk_seed_bytes(p) (p->sk_seed_bytes)
-#define PARAM_digest_bytes(p) (p->digest_bytes)
-#define PARAM_pk_seed_bytes(p) (p->pk_seed_bytes)
-#elif defined(MAYO_VARIANT)
-#define PARAM_m(p) PARAM_NAME(m)
-#define PARAM_n(p) PARAM_NAME(n)
-#define PARAM_o(p) PARAM_NAME(o)
-#define PARAM_v(p) PARAM_NAME(v)
-#define PARAM_A_cols(p) PARAM_NAME(A_cols)
-#define PARAM_k(p) PARAM_NAME(k)
-#define PARAM_q(p) PARAM_NAME(q)
-#define PARAM_m_bytes(p) PARAM_NAME(m_bytes)
-#define PARAM_O_bytes(p) PARAM_NAME(O_bytes)
-#define PARAM_v_bytes(p) PARAM_NAME(v_bytes)
-#define PARAM_r_bytes(p) PARAM_NAME(r_bytes)
-#define PARAM_P1_bytes(p) PARAM_NAME(P1_bytes)
-#define PARAM_P2_bytes(p) PARAM_NAME(P2_bytes)
-#define PARAM_P3_bytes(p) PARAM_NAME(P3_bytes)
-#define PARAM_csk_bytes(p) PARAM_NAME(csk_bytes)
-#define PARAM_esk_bytes(p) PARAM_NAME(esk_bytes)
-#define PARAM_cpk_bytes(p) PARAM_NAME(cpk_bytes)
-#define PARAM_epk_bytes(p) PARAM_NAME(epk_bytes)
-#define PARAM_sig_bytes(p) PARAM_NAME(sig_bytes)
-static const unsigned char f_tail[] = PARAM_NAME(f_tail);
-#define PARAM_salt_bytes(p) PARAM_NAME(salt_bytes)
-#define PARAM_sk_seed_bytes(p) PARAM_NAME(sk_seed_bytes)
-#define PARAM_digest_bytes(p) PARAM_NAME(digest_bytes)
-#define PARAM_pk_seed_bytes(p) PARAM_NAME(pk_seed_bytes)
-#define PARAM_f_tail(p) f_tail
-#else
-#error "Parameter not specified"
-#endif
-
 #define TICTOC
 #include <debug_bench_tools.h>
 
@@ -98,119 +41,24 @@ static void encode(const unsigned char *m, unsigned char *menc, int mlen) {
     }
 }
 
-
-// sample a solution x to Ax = y, with r used as randomness
-// require:
-// - A is a matrix with m rows and k*o+1 collumns (values in the last collum are
-// not important, they will be overwritten by y) in row major order
-// - y is a vector with m elements
-// - r and x are k*o bytes long
-// return: 1 on success, 0 on failure
-static int sample_solution(const mayo_params_t *p, unsigned char *A,
-                           const unsigned char *y, const unsigned char *r,
-                           unsigned char *x) {
-    unsigned char finished;
-    int col_upper_bound;
-    unsigned char correct_column;
-    const int k = PARAM_k(p);
-    const int o = PARAM_o(p);
-    const int m = PARAM_m(p);
-    const int A_cols = PARAM_A_cols(p);
-
-    // x <- r
-    for (int i = 0; i < k * o; i++) {
-        x[i] = r[i];
-    }
-
-    // compute Ar;
-    unsigned char Ar[M_MAX];
-    for (int i = 0; i < m; i++) {
-        A[k * o + i * (k * o + 1)] = 0; // clear last col of A
-    }
-    mat_mul(A, r, Ar, k * o + 1, m, 1);
-
-    // move y - Ar to last column of matrix A
-    for (int i = 0; i < m; i++) {
-        A[k * o + i * (k * o + 1)] = sub_f(y[i], Ar[i]);
-    }
-
-    EF(A, m, k * o + 1);
-
-    // check if last row of A (excluding the last entry of y) is zero
-    unsigned char full_rank = 0;
-    for (int i = 0; i < A_cols - 1; i++) {
-        full_rank |= A[(m - 1) * A_cols + i];
-    }
-
-// It is okay to leak if we need to restart or not
-#ifdef ENABLE_CT_TESTING
-    VALGRIND_MAKE_MEM_DEFINED(&full_rank, 1);
-#endif
-
-    if (full_rank == 0) {
-        return 0;
-    }
-
-    // back substitution in constant time
-    // the index of the first nonzero entry in each row is secret, which makes
-    // things less efficient
-
-    for (int r = m - 1; r >= 0; r--) {
-        finished = 0;
-        col_upper_bound = MAYO_MIN(r + (32/(m-r)), k*o);
-        // the first nonzero entry in row r is between r and col_upper_bound with probability at least ~1-q^{-32}
-
-        for (int col = r; col <= col_upper_bound; col++) {
-
-            // Compare two chars in constant time.
-            // Returns 0x00 if the byte arrays are equal, 0xff otherwise.
-            correct_column = ct_compare_8((A[r * A_cols + col]), 0) & ~finished;
-
-            unsigned char u = correct_column & A[r * A_cols + A_cols - 1];
-            x[col] ^= u;
-
-            for (int i = 0; i < r; i += 8) {
-                uint64_t tmp = ( (uint64_t) A[ i    * A_cols + col] <<  0) ^ ( (uint64_t) A[(i+1) * A_cols + col] <<  8)
-                             ^ ( (uint64_t) A[(i+2) * A_cols + col] << 16) ^ ( (uint64_t) A[(i+3) * A_cols + col] << 24)
-                             ^ ( (uint64_t) A[(i+4) * A_cols + col] << 32) ^ ( (uint64_t) A[(i+5) * A_cols + col] << 40)
-                             ^ ( (uint64_t) A[(i+6) * A_cols + col] << 48) ^ ( (uint64_t) A[(i+7) * A_cols + col] << 56);
-
-                tmp = mul_fx8(u, tmp);
-
-                A[ i    * A_cols + A_cols - 1] ^= (tmp      ) & 0xf;
-                A[(i+1) * A_cols + A_cols - 1] ^= (tmp >> 8 ) & 0xf;
-                A[(i+2) * A_cols + A_cols - 1] ^= (tmp >> 16) & 0xf;
-                A[(i+3) * A_cols + A_cols - 1] ^= (tmp >> 24) & 0xf;
-                A[(i+4) * A_cols + A_cols - 1] ^= (tmp >> 32) & 0xf;
-                A[(i+5) * A_cols + A_cols - 1] ^= (tmp >> 40) & 0xf;
-                A[(i+6) * A_cols + A_cols - 1] ^= (tmp >> 48) & 0xf;
-                A[(i+7) * A_cols + A_cols - 1] ^= (tmp >> 56) & 0xf;
-            }
-
-            finished = finished | correct_column;
-        }
-    }
-    return 1;
-}
-
 static void reduce_y_mod_fX(unsigned char *y, int m, int k,
-                            const unsigned char *f_tail) {
+                            const unsigned char *ftail) {
     for (int i = m + k * (k + 1) / 2 - 2; i >= m; i--) {
         for (int j = 0; j < F_TAIL_LEN; j++) {
-            y[i - m + j] ^= mul_f(y[i], f_tail[j]);
+            y[i - m + j] ^= mul_f(y[i], ftail[j]);
         }
         y[i] = 0;
     }
 }
 
 static void reduce_A_mod_fX(unsigned char *A, int m, int k, int A_cols,
-                            const unsigned char *f_tail) {
+                            const unsigned char *ftail) {
     for (int i = m + k * (k + 1) / 2 - 2; i >= m; i--) {
-        for (int k = 0; k < A_cols - 1; k++) {
+        for (int kk = 0; kk < A_cols - 1; kk++) {
             for (int j = 0; j < F_TAIL_LEN; j++) {
-                A[(i - m + j) * A_cols + k] ^= mul_f(A[i * A_cols + k], f_tail[j]);
+                A[(i - m + j) * A_cols + kk] ^= mul_f(A[i * A_cols + kk], ftail[j]);
             }
-            A[i * A_cols + k] = 0;
+            A[i * A_cols + kk] = 0;
         }
     }
 }
@@ -254,7 +102,8 @@ int mayo_sign(const mayo_params_t *p, unsigned char *sm,
     unsigned char s[K_MAX * N_MAX];     // not secret data
     const unsigned char *seed_sk;
     unsigned char O[(N_MINUS_O_MAX)*O_MAX]; // secret data
-    unsigned char sk[ESK_BYTES_MAX];        // secret data
+    sk_t sk;                                // secret data
+
     unsigned char Ox[N_MINUS_O_MAX];        // secret data
     // unsigned char Mdigest[DIGEST_BYTES];
     unsigned char tmp[DIGEST_BYTES_MAX + SALT_BYTES_MAX + SK_SEED_BYTES_MAX + 1];
@@ -267,35 +116,29 @@ int mayo_sign(const mayo_params_t *p, unsigned char *sm,
     const int param_o = PARAM_o(p);
     const int param_k = PARAM_k(p);
     const int param_m_bytes = PARAM_m_bytes(p);
-    const int param_O_bytes = PARAM_O_bytes(p);
     const int param_v_bytes = PARAM_v_bytes(p);
     const int param_r_bytes = PARAM_r_bytes(p);
     const int param_P1_bytes = PARAM_P1_bytes(p);
-    const int param_P2_bytes = PARAM_P2_bytes(p);
     const int param_sig_bytes = PARAM_sig_bytes(p);
     const int param_A_cols = PARAM_A_cols(p);
     const int param_digest_bytes = PARAM_digest_bytes(p);
     const int param_sk_seed_bytes = PARAM_sk_seed_bytes(p);
     const int param_salt_bytes = PARAM_salt_bytes(p);
 
-    ret = mayo_expand_sk(p, csk, sk);
+    ret = mayo_expand_sk(p, csk, &sk);
     if (ret != MAYO_OK) {
         goto err;
     }
 
     seed_sk = csk;
-    decode(sk + param_sk_seed_bytes, O, (param_n - param_o) * param_o);
+    decode(sk.o, O, (param_n - param_o) * param_o);
 
     // hash message
-    SHAKE256(tmp, param_digest_bytes, m, mlen);
+    shake256(tmp, param_digest_bytes, m, mlen);
 
-    alignas (32) uint32_t bitsliced_P1[P1_BYTES_MAX / 4];
-    memcpy(bitsliced_P1, sk + param_sk_seed_bytes + param_O_bytes,
-           param_P1_bytes);
-    alignas (32) uint32_t bitsliced_L[P2_BYTES_MAX / 4];
-    memcpy(bitsliced_L, sk + param_sk_seed_bytes + param_O_bytes + param_P1_bytes,
-           param_P2_bytes);
-    alignas (32) uint32_t bitsliced_M[K_MAX * O_MAX * M_MAX / 8] = {0};
+    uint32_t *bitsliced_P1 = sk.p;
+    uint32_t *bitsliced_L = sk.p + (param_P1_bytes/4);
+    uint32_t bitsliced_M[K_MAX * O_MAX * M_MAX / 8] = {0};
 
 #ifdef TARGET_BIG_ENDIAN
     for (int i = 0; i < param_P1_bytes / 4; ++i) {
@@ -315,7 +158,7 @@ int mayo_sign(const mayo_params_t *p, unsigned char *sm,
     // hashing to salt
     memcpy(tmp + param_digest_bytes + param_salt_bytes, seed_sk,
            param_sk_seed_bytes);
-    SHAKE256(salt, param_salt_bytes, tmp,
+    shake256(salt, param_salt_bytes, tmp,
              param_digest_bytes + param_salt_bytes + param_sk_seed_bytes);
 
 #ifdef ENABLE_CT_TESTING
@@ -326,13 +169,13 @@ int mayo_sign(const mayo_params_t *p, unsigned char *sm,
     memcpy(tmp + param_digest_bytes, salt, param_salt_bytes);
     ctrbyte = tmp + param_digest_bytes + param_salt_bytes + param_sk_seed_bytes;
 
-    SHAKE256(tenc, param_m_bytes, tmp, param_digest_bytes + param_salt_bytes);
+    shake256(tenc, param_m_bytes, tmp, param_digest_bytes + param_salt_bytes);
     decode(tenc, t, param_m); // may not be necessary
 
     for (int ctr = 0; ctr <= 255; ++ctr) {
         *ctrbyte = (unsigned char)ctr;
 
-        SHAKE256(V, param_k * param_v_bytes + param_r_bytes, tmp,
+        shake256(V, param_k * param_v_bytes + param_r_bytes, tmp,
                  param_digest_bytes + param_salt_bytes + param_sk_seed_bytes + 1);
 
         // decode the v_i vectors
@@ -390,18 +233,18 @@ int mayo_sign(const mayo_params_t *p, unsigned char *sm,
 
                 // add the M_i and M_j to A, shifted "down" by l positions
                 Mj = M + j * param_m * param_o;
-                for (int r = 0; r < param_m; r++) {
+                for (int rr = 0; rr < param_m; rr++) {
                     for (int c = 0; c < param_o; c++) {
-                        A[(r + l) * param_A_cols + i * param_o + c] ^= Mj[r * param_o + c];
+                        A[(rr + l) * param_A_cols + i * param_o + c] ^= Mj[rr * param_o + c];
                     }
                 }
 
                 if (i != j) {
                     Mi = M + i * param_m * param_o;
-                    for (int r = 0; r < param_m; r++) {
+                    for (int rr = 0; rr < param_m; rr++) {
                         for (int c = 0; c < param_o; c++) {
-                            A[(r + l) * param_A_cols + j * param_o + c] ^=
-                                Mi[r * param_o + c];
+                            A[(rr + l) * param_A_cols + j * param_o + c] ^=
+                                Mi[rr * param_o + c];
                         }
                     }
                 }
@@ -416,7 +259,7 @@ int mayo_sign(const mayo_params_t *p, unsigned char *sm,
         decode(V + param_k * param_v_bytes, r,
                param_k *
                param_o);
-        if (sample_solution(p, A, y, r, x)) {
+        if (sample_solution(p, A, y, r, x, param_k, param_o, param_m, param_A_cols)) {
             break;
         } else {
             memset(bitsliced_M, 0, param_k * param_o * param_m / 8 * sizeof(uint32_t));
@@ -444,7 +287,7 @@ err:
     mayo_secure_clear(A, 2 * M_MAX * (K_MAX * O_MAX + 1));
     mayo_secure_clear(r, K_MAX * O_MAX + 1);
     mayo_secure_clear(O, (N_MINUS_O_MAX)*O_MAX);
-    mayo_secure_clear(sk, ESK_BYTES_MAX);
+    mayo_secure_clear(&sk, sizeof(sk_t));
     mayo_secure_clear(Ox, N_MINUS_O_MAX);
     mayo_secure_clear(tmp,
                       DIGEST_BYTES_MAX + SALT_BYTES_MAX + SK_SEED_BYTES_MAX + 1);
@@ -459,7 +302,7 @@ int mayo_open(const mayo_params_t *p, unsigned char *m,
         return MAYO_ERR;
     }
     int result = mayo_verify(p, sm + param_sig_bytes, smlen - param_sig_bytes, sm,
-                             param_sig_bytes, pk);
+                             pk);
 
     if (result == MAYO_OK) {
         *mlen = smlen - param_sig_bytes;
@@ -496,8 +339,8 @@ int mayo_keypair_compact(const mayo_params_t *p, unsigned char *cpk,
         goto err;
     }
 
-    // S ← SHAKE256(seedsk, pk seed bytes + O bytes)
-    SHAKE256(S, param_pk_seed_bytes + param_O_bytes, seed_sk,
+    // S ← shake256(seedsk, pk seed bytes + O bytes)
+    shake256(S, param_pk_seed_bytes + param_O_bytes, seed_sk,
              param_sk_seed_bytes);
     // seed_pk ← s[0 : pk_seed_bytes]
     seed_pk = S;
@@ -545,6 +388,9 @@ err:
 
 int mayo_expand_pk(const mayo_params_t *p, const unsigned char *cpk,
                    unsigned char *pk) {
+    #ifdef MAYO_VARIANT
+    (void)p;
+    #endif
     const int param_P1_bytes = PARAM_P1_bytes(p);
     const int param_P2_bytes = PARAM_P2_bytes(p);
     const int param_P3_bytes = PARAM_P3_bytes(p);
@@ -556,15 +402,12 @@ int mayo_expand_pk(const mayo_params_t *p, const unsigned char *cpk,
 }
 
 int mayo_expand_sk(const mayo_params_t *p, const unsigned char *csk,
-                   unsigned char *sk) {
+                   sk_t *sk) {
     int ret = MAYO_OK;
     unsigned char S[PK_SEED_BYTES_MAX + O_BYTES_MAX];
-    alignas (32) uint32_t bitsliced_P[(P1_BYTES_MAX + P2_BYTES_MAX) / 4];
-    alignas (32) uint32_t bitsliced_P1_P1t[N_MINUS_O_MAX * N_MINUS_O_MAX * M_MAX / 8];
+    uint32_t *bitsliced_P = sk->p;
     unsigned char O[(N_MINUS_O_MAX)*O_MAX];
 
-    const int param_m = PARAM_m(p);
-    const int m_legs = param_m / 32;
     const int param_o = PARAM_o(p);
     const int param_v = PARAM_v(p);
     const int param_O_bytes = PARAM_O_bytes(p);
@@ -576,7 +419,7 @@ int mayo_expand_sk(const mayo_params_t *p, const unsigned char *csk,
     const unsigned char *seed_sk = csk;
     unsigned char *seed_pk = S;
 
-    SHAKE256(S, param_pk_seed_bytes + param_O_bytes, seed_sk,
+    shake256(S, param_pk_seed_bytes + param_O_bytes, seed_sk,
              param_sk_seed_bytes);
     decode(S + param_pk_seed_bytes, O,
            param_v * param_o); // O = S + PK_SEED_BYTES;
@@ -599,31 +442,13 @@ int mayo_expand_sk(const mayo_params_t *p, const unsigned char *csk,
     }
 #endif
 
-    // compute P_i^(1) + P_i^(1)t for all i
-    int used = 0;
-    for (int r = 0; r < param_v; r++) {
-        for (int c = r; c < param_v; c++) {
-            if (r == c) {
-                memset((void *)(bitsliced_P1_P1t + m_legs * 4 * (r * param_v + c)), 0,
-                       param_m / 2);
-            } else {
-                bitsliced_m_vec_copy(m_legs, bitsliced_P1 + m_legs * 4 * used,
-                                     bitsliced_P1_P1t + m_legs * 4 * (r * param_v + c));
-                bitsliced_m_vec_copy(m_legs, bitsliced_P1 + m_legs * 4 * used,
-                                     bitsliced_P1_P1t + m_legs * 4 * (c * param_v + r));
-            }
-            used++;
-        }
-    }
-
     // compute L_i = (P1 + P1^t)*O + P2
     uint32_t *bitsliced_L = bitsliced_P2;
 
-    P1P1t_times_O(p, bitsliced_P1_P1t, O, bitsliced_L);
+    P1P1t_times_O(p, bitsliced_P1, O, bitsliced_L);
 
     // write to sk
-    sk += param_sk_seed_bytes;
-    memcpy(sk, S + param_pk_seed_bytes, param_O_bytes);
+    memcpy(sk->o, S + param_pk_seed_bytes, param_O_bytes);
 
 #ifdef TARGET_BIG_ENDIAN
     for (int i = 0; i < (param_P1_bytes + param_P2_bytes) / 4; ++i) {
@@ -631,19 +456,14 @@ int mayo_expand_sk(const mayo_params_t *p, const unsigned char *csk,
     }
 #endif
 
-    sk += param_O_bytes;
-    memcpy(sk, bitsliced_P, param_P1_bytes + param_P2_bytes);
-
     mayo_secure_clear(S, PK_SEED_BYTES_MAX + O_BYTES_MAX);
-    mayo_secure_clear(bitsliced_P,
-                      ((P1_BYTES_MAX + P2_BYTES_MAX) / 4) * sizeof(uint32_t));
     mayo_secure_clear(O, (N_MINUS_O_MAX)*O_MAX);
     return ret;
 }
 
 int mayo_verify(const mayo_params_t *p, const unsigned char *m,
                 unsigned long long mlen, const unsigned char *sig,
-                unsigned long long siglen, const unsigned char *cpk) {
+                const unsigned char *cpk) {
 
     unsigned char tEnc[M_BYTES_MAX];
     unsigned char t[M_MAX];
@@ -690,26 +510,21 @@ int mayo_verify(const mayo_params_t *p, const unsigned char *m,
 #endif
 
     // hash m
-    SHAKE256(tmp, param_digest_bytes, m, mlen);
+    shake256(tmp, param_digest_bytes, m, mlen);
 
     // compute t
     memcpy(tmp + param_digest_bytes, sig + param_sig_bytes - param_salt_bytes,
            param_salt_bytes);
-    SHAKE256(tEnc, param_m_bytes, tmp, param_digest_bytes + param_salt_bytes);
+    shake256(tEnc, param_m_bytes, tmp, param_digest_bytes + param_salt_bytes);
     decode(tEnc, t, param_m);
 
     // decode s
     decode(sig, s, param_k * param_n);
 
-    // compute P * S^t = {(P1, P2), (0, P3)} * S^t = {(P1*S1 + P2*S2), (P3 * S2)}
-    alignas (32) uint32_t bitsliced_PS[N_MAX * K_MAX * M_MAX / 8];
-    bitsliced_m_calculate_PS(bitsliced_P1, bitsliced_P2, bitsliced_P3, s, param_m,
-                             param_v, param_o, param_k, bitsliced_PS);
-
     // compute S * P * S = S* (P*S)
     alignas (32) uint32_t bitsliced_SPS[K_MAX * K_MAX * M_MAX / 8] = {0};
-    mul_add_mat_x_bitsliced_m_mat(m_legs, s, bitsliced_PS, bitsliced_SPS, param_k,
-                                  param_n, param_k);
+    bitsliced_m_calculate_PS_SPS(bitsliced_P1, bitsliced_P2, bitsliced_P3, s, param_m,
+                             param_v, param_o, param_k, bitsliced_SPS);
 
     // compute SPS_upper
     alignas (32) uint32_t bitsliced_SPS_upper[K_MAX * (K_MAX + 1) * M_MAX / 16];

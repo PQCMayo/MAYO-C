@@ -2,6 +2,11 @@
 
 #include "bitsliced_arithmetic.h"
 #include <stdalign.h>
+#include <string.h>
+#include <mem.h>
+#include <simple_arithmetic.h>
+#include <echelon_form.h>
+
 
 // This implements arithmetic for bitsliced vectors of m field elements in Z_2[x]/(x^4+x+1)
 // A bitsliced vector is consists of m/32 * 4 consecutive uint32_t's
@@ -141,7 +146,26 @@ void P1_times_O(const mayo_params_t* p, const uint32_t* P1, const unsigned char*
     #endif
 }
 
-void P1P1t_times_O(const mayo_params_t* p, const uint32_t* P1P1t, const unsigned char* O, uint32_t* acc){
+void P1P1t_times_O(const mayo_params_t* p, const uint32_t* P1, const unsigned char* O, uint32_t* acc){
+    alignas (32) uint32_t P1P1t[N_MINUS_O_MAX * N_MINUS_O_MAX * M_MAX / 8];
+    const int m_legs = p->m/32;
+    // compute P_i^(1) + P_i^(1)t for all i
+    int used = 0;
+    for (int r = 0; r < (p->n - p->o); r++) {
+        for (int c = r; c < (p->n - p->o); c++) {
+            if (r == c) {
+                memset((void *)(P1P1t + m_legs * 4 * (r * (p->n - p->o) + c)), 0,
+                       p->m / 2);
+            } else {
+                bitsliced_m_vec_copy(m_legs, P1 + m_legs * 4 * used,
+                                     P1P1t + m_legs * 4 * (r * (p->n - p->o) + c));
+                bitsliced_m_vec_copy(m_legs, P1 + m_legs * 4 * used,
+                                     P1P1t + m_legs * 4 * (c * (p->n - p->o) + r));
+            }
+            used++;
+        }
+    }
+    
     #if (MAYO_AVX && defined(MAYO_VARIANT) && M_MAX == 64 && (O_MAX % 2 == 0))
         mayo_12_P1P1t_times_O(P1P1t,O,acc);
     #elif (MAYO_AVX && defined(MAYO_VARIANT) && M_MAX == 96 && (O_MAX % 10 == 0))
@@ -173,10 +197,13 @@ void mul_add_bitsliced_m_upper_triangular_mat_x_mat(int m_legs, const uint32_t *
         for (int c = triangular * r; c < bs_mat_cols; c++) {
             for (int k = 0; k < mat_cols; k += 1) {
 #if defined(MAYO_VARIANT) && (M_MAX == 64)
+                (void)m_legs;
                 bitsliced_64_vec_mul_add((uint64_t *) bs_mat + 4 * bs_mat_entries_used, mat[c * mat_cols + k], (uint64_t *) acc + 4 * (r * mat_cols + k));
 #elif defined(MAYO_VARIANT) && (M_MAX == 96)
+                (void)m_legs;
                 bitsliced_96_vec_mul_add(bs_mat + 12 * bs_mat_entries_used, mat[c * mat_cols + k], acc + 12 * (r * mat_cols + k));
 #elif defined(MAYO_VARIANT) && (M_MAX == 128)
+                (void)m_legs;
                 bitsliced_128_vec_mul_add((uint64_t *) bs_mat + 8 * bs_mat_entries_used, mat[c * mat_cols + k], (uint64_t *) acc + 8 * (r * mat_cols + k));
 #else
                 bitsliced_m_vec_mul_add(m_legs, bs_mat + m_legs * 4 * bs_mat_entries_used, mat[c * mat_cols + k], acc + m_legs * 4 * (r * mat_cols + k));
@@ -195,10 +222,13 @@ void mul_add_bitsliced_m_upper_triangular_mat_x_mat_trans(int m_legs, const uint
         for (int c = triangular * r; c < bs_mat_cols; c++) {
             for (int k = 0; k < mat_rows; k += 1) {
 #if defined(MAYO_VARIANT) && (M_MAX == 64)
+                (void)m_legs;
                 bitsliced_64_vec_mul_add((uint64_t *) bs_mat + 4 * bs_mat_entries_used, mat[k * bs_mat_cols + c], (uint64_t *) acc + 4 * (r * mat_rows + k));
 #elif defined(MAYO_VARIANT) && (M_MAX == 96)
+                (void)m_legs;
                 bitsliced_96_vec_mul_add(bs_mat + 12 * bs_mat_entries_used, mat[k * bs_mat_cols + c], acc + 12 * (r * mat_rows + k));
 #elif defined(MAYO_VARIANT) && (M_MAX == 128)
+                (void)m_legs;
                 bitsliced_128_vec_mul_add((uint64_t *) bs_mat + 8 * bs_mat_entries_used, mat[k * bs_mat_cols + c], (uint64_t *) acc + 8 * (r * mat_rows + k));
 #else
                 bitsliced_m_vec_mul_add(m_legs, bs_mat + m_legs * 4 * bs_mat_entries_used, mat[k * bs_mat_cols + c], acc + m_legs * 4 * (r * mat_rows + k));
@@ -216,10 +246,13 @@ void mul_add_mat_trans_x_bitsliced_m_mat(int m_legs, const unsigned char *mat, c
         for (int c = 0; c < mat_rows; c++) {
             for (int k = 0; k < bs_mat_cols; k += 1) {
 #if defined(MAYO_VARIANT) && (M_MAX == 64)
+                (void)m_legs;
                 bitsliced_64_vec_mul_add((uint64_t *)bs_mat + 4 * (c * bs_mat_cols + k), mat[c * mat_cols + r], (uint64_t *) acc + 4 * (r * bs_mat_cols + k));
 #elif defined(MAYO_VARIANT) && (M_MAX == 96)
+                (void)m_legs;
                 bitsliced_96_vec_mul_add(bs_mat + 12 * (c * bs_mat_cols + k), mat[c * mat_cols + r], acc + 12 * (r * bs_mat_cols + k));
 #elif defined(MAYO_VARIANT) && (M_MAX == 128)
+                (void)m_legs;
                 bitsliced_128_vec_mul_add((uint64_t *)bs_mat + 8 * (c * bs_mat_cols + k), mat[c * mat_cols + r], (uint64_t *) acc + 8 * (r * bs_mat_cols + k));
 #else
                 bitsliced_m_vec_mul_add(m_legs, bs_mat + m_legs * 4 * (c * bs_mat_cols + k), mat[c * mat_cols + r], acc + m_legs * 4 * (r * bs_mat_cols + k));
@@ -236,10 +269,13 @@ void mul_add_mat_x_bitsliced_m_mat(int m_legs, const unsigned char *mat, const u
         for (int c = 0; c < mat_cols; c++) {
             for (int k = 0; k < bs_mat_cols; k += 1) {
 #if defined(MAYO_VARIANT) && (M_MAX == 64)
+                (void)m_legs;
                 bitsliced_64_vec_mul_add((uint64_t *)bs_mat + 4 * (c * bs_mat_cols + k), mat[r * mat_cols + c], (uint64_t *) acc + 4 * (r * bs_mat_cols + k));
 #elif defined(MAYO_VARIANT) && (M_MAX == 96)
+                (void)m_legs;
                 bitsliced_96_vec_mul_add(bs_mat + 12 * (c * bs_mat_cols + k), mat[r * mat_cols + c], acc + 12 * (r * bs_mat_cols + k));
 #elif defined(MAYO_VARIANT) && (M_MAX == 128)
+                (void)m_legs;
                 bitsliced_128_vec_mul_add((uint64_t *)bs_mat + 8 * (c * bs_mat_cols + k), mat[r * mat_cols + c], (uint64_t *) acc + 8 * (r * bs_mat_cols + k));
 #else
                 bitsliced_m_vec_mul_add(m_legs, bs_mat + m_legs * 4 * (c * bs_mat_cols + k), mat[r * mat_cols + c], acc + m_legs * 4 * (r * bs_mat_cols + k));
@@ -247,6 +283,20 @@ void mul_add_mat_x_bitsliced_m_mat(int m_legs, const unsigned char *mat, const u
             }
         }
     }
+}
+
+void bitsliced_m_calculate_PS_SPS(const uint32_t *bitsliced_P1, const uint32_t *bitsliced_P2, const uint32_t *bitsliced_P3, const unsigned char *S,
+                              const int m, const int v, const int o, const int k, uint32_t *bitsliced_SPS){
+    // compute P * S^t = {(P1, P2), (0, P3)} * S^t = {(P1*S1 + P2*S2), (P3 * S2)}
+    alignas (32) uint32_t bitsliced_PS[N_MAX * K_MAX * M_MAX / 8];
+    const int m_legs = m/32;
+    const int n = v+o;
+    bitsliced_m_calculate_PS(bitsliced_P1, bitsliced_P2, bitsliced_P3, S, m,
+                             v, o, k, bitsliced_PS);
+
+    mul_add_mat_x_bitsliced_m_mat(m_legs, S, bitsliced_PS, bitsliced_SPS, k,
+                                  n, k);
+
 }
 
 void bitsliced_m_multiply_bins(const int m_legs, uint32_t *bins, uint32_t *out) {
@@ -298,6 +348,7 @@ void bitsliced_m_calculate_PS(const uint32_t *P1, const uint32_t *P2, const uint
 
     const int n = o + v;
 #if defined(MAYO_VARIANT) && ((M_MAX == 64) || (M_MAX == 96) || M_MAX == 128)
+    (void) m;
 #else
     const int m_legs = m / 32;
 #endif
@@ -494,4 +545,96 @@ void bitsliced_m_calculate_PS(const uint32_t *P1, const uint32_t *P2, const uint
         i++;
 #endif
     }
+}
+
+
+// sample a solution x to Ax = y, with r used as randomness
+// require:
+// - A is a matrix with m rows and k*o+1 collumns (values in the last collum are
+// not important, they will be overwritten by y) in row major order
+// - y is a vector with m elements
+// - r and x are k*o bytes long
+// return: 1 on success, 0 on failure
+int sample_solution(const mayo_params_t *p, unsigned char *A,
+                           const unsigned char *y, const unsigned char *r,
+                           unsigned char *x,int k, int o, int m, int A_cols) {
+    (void) p;
+    unsigned char finished;
+    int col_upper_bound;
+    unsigned char correct_column;
+
+    // x <- r
+    for (int i = 0; i < k * o; i++) {
+        x[i] = r[i];
+    }
+
+    // compute Ar;
+    unsigned char Ar[M_MAX];
+    for (int i = 0; i < m; i++) {
+        A[k * o + i * (k * o + 1)] = 0; // clear last col of A
+    }
+    mat_mul(A, r, Ar, k * o + 1, m, 1);
+
+    // move y - Ar to last column of matrix A
+    for (int i = 0; i < m; i++) {
+        A[k * o + i * (k * o + 1)] = sub_f(y[i], Ar[i]);
+    }
+
+    EF(A, m, k * o + 1);
+
+    // check if last row of A (excluding the last entry of y) is zero
+    unsigned char full_rank = 0;
+    for (int i = 0; i < A_cols - 1; i++) {
+        full_rank |= A[(m - 1) * A_cols + i];
+    }
+
+// It is okay to leak if we need to restart or not
+#ifdef ENABLE_CT_TESTING
+    VALGRIND_MAKE_MEM_DEFINED(&full_rank, 1);
+#endif
+
+    if (full_rank == 0) {
+        return 0;
+    }
+
+    // back substitution in constant time
+    // the index of the first nonzero entry in each row is secret, which makes
+    // things less efficient
+
+    for (int rr = m - 1; rr >= 0; rr--) {
+        finished = 0;
+        col_upper_bound = MAYO_MIN(rr + (32/(m-rr)), k*o);
+        // the first nonzero entry in row r is between r and col_upper_bound with probability at least ~1-q^{-32}
+
+        for (int col = rr; col <= col_upper_bound; col++) {
+
+            // Compare two chars in constant time.
+            // Returns 0x00 if the byte arrays are equal, 0xff otherwise.
+            correct_column = ct_compare_8((A[rr * A_cols + col]), 0) & ~finished;
+
+            unsigned char u = correct_column & A[rr * A_cols + A_cols - 1];
+            x[col] ^= u;
+
+            for (int i = 0; i < rr; i += 8) {
+                uint64_t tmp = ( (uint64_t) A[ i    * A_cols + col] <<  0) ^ ( (uint64_t) A[(i+1) * A_cols + col] <<  8)
+                             ^ ( (uint64_t) A[(i+2) * A_cols + col] << 16) ^ ( (uint64_t) A[(i+3) * A_cols + col] << 24)
+                             ^ ( (uint64_t) A[(i+4) * A_cols + col] << 32) ^ ( (uint64_t) A[(i+5) * A_cols + col] << 40)
+                             ^ ( (uint64_t) A[(i+6) * A_cols + col] << 48) ^ ( (uint64_t) A[(i+7) * A_cols + col] << 56);
+
+                tmp = mul_fx8(u, tmp);
+
+                A[ i    * A_cols + A_cols - 1] ^= (tmp      ) & 0xf;
+                A[(i+1) * A_cols + A_cols - 1] ^= (tmp >> 8 ) & 0xf;
+                A[(i+2) * A_cols + A_cols - 1] ^= (tmp >> 16) & 0xf;
+                A[(i+3) * A_cols + A_cols - 1] ^= (tmp >> 24) & 0xf;
+                A[(i+4) * A_cols + A_cols - 1] ^= (tmp >> 32) & 0xf;
+                A[(i+5) * A_cols + A_cols - 1] ^= (tmp >> 40) & 0xf;
+                A[(i+6) * A_cols + A_cols - 1] ^= (tmp >> 48) & 0xf;
+                A[(i+7) * A_cols + A_cols - 1] ^= (tmp >> 56) & 0xf;
+            }
+
+            finished = finished | correct_column;
+        }
+    }
+    return 1;
 }
