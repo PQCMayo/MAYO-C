@@ -31,7 +31,7 @@ static int example_mayo(const mayo_params_t* p) {
     unsigned char *sk  = calloc(p->csk_bytes, 1);
 
     unsigned char *epk = calloc(p->epk_bytes, 1);
-    sk_t *esk = (sk_t *)calloc(p->esk_bytes, 1);
+    sk_t *esk = calloc(sizeof(sk_t), 1);
 
     unsigned char *sig = calloc(p->sig_bytes + msglen, 1);
 
