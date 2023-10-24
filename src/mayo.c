@@ -102,7 +102,7 @@ int mayo_sign(const mayo_params_t *p, unsigned char *sm,
     unsigned char s[K_MAX * N_MAX];     // not secret data
     const unsigned char *seed_sk;
     unsigned char O[(N_MINUS_O_MAX)*O_MAX]; // secret data
-    sk_t sk;                                // secret data
+    alignas(32) sk_t sk;                    // secret data
 
     unsigned char Ox[N_MINUS_O_MAX];        // secret data
     // unsigned char Mdigest[DIGEST_BYTES];

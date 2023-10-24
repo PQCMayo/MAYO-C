@@ -152,19 +152,19 @@ void P1_times_O(const mayo_params_t* p, const uint32_t* P1, const unsigned char*
 
 void P1P1t_times_O(const mayo_params_t* p, const uint32_t* P1, const unsigned char* O, uint32_t* acc){
     alignas (32) uint32_t P1P1t[N_MINUS_O_MAX * N_MINUS_O_MAX * M_MAX / 8];
-    const int m_legs = p->m/32;
+    const int m_legs = PARAM_m(p)/32;
     // compute P_i^(1) + P_i^(1)t for all i
     int used = 0;
-    for (int r = 0; r < (p->n - p->o); r++) {
-        for (int c = r; c < (p->n - p->o); c++) {
+    for (int r = 0; r < PARAM_v(p); r++) {
+        for (int c = r; c < (PARAM_v(p)); c++) {
             if (r == c) {
-                memset((void *)(P1P1t + m_legs * 4 * (r * (p->n - p->o) + c)), 0,
-                       p->m / 2);
+                memset((void *)(P1P1t + m_legs * 4 * (r * (PARAM_v(p)) + c)), 0,
+                       PARAM_m(p) / 2);
             } else {
                 bitsliced_m_vec_copy(m_legs, P1 + m_legs * 4 * used,
-                                     P1P1t + m_legs * 4 * (r * (p->n - p->o) + c));
+                                     P1P1t + m_legs * 4 * (r * (PARAM_v(p)) + c));
                 bitsliced_m_vec_copy(m_legs, P1 + m_legs * 4 * used,
-                                     P1P1t + m_legs * 4 * (c * (p->n - p->o) + r));
+                                     P1P1t + m_legs * 4 * (c * (PARAM_v(p)) + r));
             }
             used++;
         }

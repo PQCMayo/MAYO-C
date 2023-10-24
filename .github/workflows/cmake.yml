@@ -92,10 +92,10 @@ jobs:
           rm -rf build
           cmake -Bbuild -DENABLE_CT_TESTING=ON -DCMAKE_BUILD_TYPE=Debug -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DMAYO_MARCH="-march=haswell -maes"
           cmake --build build
-          valgrind --track-origins=yes build/test/mayo_test_scheme_MAYO_1
-          valgrind --track-origins=yes build/test/mayo_test_scheme_MAYO_2
-          valgrind --track-origins=yes build/test/mayo_test_scheme_MAYO_3
-          valgrind --track-origins=yes build/test/mayo_test_scheme_MAYO_5
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme_MAYO_1
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme_MAYO_2
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme_MAYO_3
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme_MAYO_5
       if: matrix.mayo_build_type == 'opt' || matrix.mayo_build_type == 'avx2'
 
     - name: CT-Tests
@@ -103,10 +103,10 @@ jobs:
           rm -rf build
           cmake -Bbuild -DENABLE_CT_TESTING=ON -DCMAKE_BUILD_TYPE=Debug -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DMAYO_MARCH="-march=haswell -maes"
           cmake --build build
-          valgrind --track-origins=yes build/test/mayo_test_scheme MAYO_1
-          valgrind --track-origins=yes build/test/mayo_test_scheme MAYO_2
-          valgrind --track-origins=yes build/test/mayo_test_scheme MAYO_3
-          valgrind --track-origins=yes build/test/mayo_test_scheme MAYO_5
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO_1
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO_2
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO_3
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO_5
       if: matrix.mayo_build_type == 'ref'
 
     - name: Memcheck
@@ -114,8 +114,22 @@ jobs:
           rm -rf build
           cmake -Bbuild -DCMAKE_BUILD_TYPE=Debug -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DMAYO_MARCH="-march=haswell -maes"
           cmake --build build
-          ctest -T memcheck --test-dir build
-      # valgrind-ci unit_tests_valgrind.xml --summary
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO_1
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO_2
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO_3
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO_5
+      if: matrix.mayo_build_type == 'ref'
+
+    - name: Memcheck
+      run: |
+          rm -rf build
+          cmake -Bbuild -DCMAKE_BUILD_TYPE=Debug -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DMAYO_MARCH="-march=haswell -maes"
+          cmake --build build
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme_MAYO_1
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme_MAYO_2
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme_MAYO_3
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme_MAYO_5
+      if: matrix.mayo_build_type == 'opt' || matrix.mayo_build_type == 'avx2'
 
     - name: Address Sanitizer ASAN
       run: |
