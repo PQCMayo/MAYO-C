@@ -140,18 +140,18 @@ static inline void EF(unsigned char *A, int nrows, int ncols) {
 
         // eliminate entries below pivot
         for (int row = pivot_row_lower_bound; row < nrows; row++) {
-            unsigned char below_pivot = (row > pivot_row) && (!pivot_is_zero);
+            unsigned char below_pivot = (unsigned char) (ct_is_greater_than(row, pivot_row) & ~pivot_is_zero);
             unsigned char elt_to_elim = bitsliced_m_extract_element(
                                             legs, bitsliced_A + row * legs * 4, pivot_col);
 
 #if defined(MAYO_VARIANT) && (((K_MAX * O_MAX + 1 + 31) / 32) == 3)
-            bitsliced_96_vec_mul_add(_pivot_row2, below_pivot * elt_to_elim,
+            bitsliced_96_vec_mul_add(_pivot_row2, below_pivot & elt_to_elim,
                                     bitsliced_A + row * legs * 4);
 #elif defined(MAYO_VARIANT) && (((K_MAX * O_MAX + 1 + 31) / 32) == 4)
-            bitsliced_128_vec_mul_add((uint64_t *)_pivot_row2, below_pivot * elt_to_elim,
+            bitsliced_128_vec_mul_add((uint64_t *)_pivot_row2, below_pivot & elt_to_elim,
                                     (uint64_t *)(bitsliced_A + row * legs * 4));                                    
 #else
-            bitsliced_m_vec_mul_add(legs, _pivot_row2, below_pivot * elt_to_elim,
+            bitsliced_m_vec_mul_add(legs, _pivot_row2, below_pivot & elt_to_elim,
                                     bitsliced_A + row * legs * 4);
 
 #endif

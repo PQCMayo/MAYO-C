@@ -313,18 +313,18 @@ inline void mayo_3_P1P1t_times_O(const uint32_t *_P1P1t, const unsigned char *O,
                 __m128i X8 = inrot[2] ^ (in[2]);
 
                 #define PART(x) \
-                acc[3 * (r * O_MAX + k + x) + 0] ^= a0##x & in[0]; \
-                acc[3 * (r * O_MAX + k + x) + 1] ^= a0##x & in[1]; \
-                acc[3 * (r * O_MAX + k + x) + 2] ^= a0##x & in[2]; \
-                acc[3 * (r * O_MAX + k + x) + 0] ^= a1##x & X1; \
-                acc[3 * (r * O_MAX + k + x) + 1] ^= a1##x & X2; \
-                acc[3 * (r * O_MAX + k + x) + 2] ^= a1##x & (inrot3[2]); \
-                acc[3 * (r * O_MAX + k + x) + 0] ^= a2##x & X3; \
-                acc[3 * (r * O_MAX + k + x) + 1] ^= a2##x & X4; \
-                acc[3 * (r * O_MAX + k + x) + 2] ^= a2##x & X5; \
-                acc[3 * (r * O_MAX + k + x) + 0] ^= a3##x & X6; \
-                acc[3 * (r * O_MAX + k + x) + 1] ^= a3##x & X7; \
-                acc[3 * (r * O_MAX + k + x) + 2] ^= a3##x & X8; \
+                _mm_storeu_si128(&acc[3 * (r * O_MAX + k + x) + 0], _mm_loadu_si128(&acc[3 * (r * O_MAX + k + x) + 0]) ^ (a0##x & in[0])); \
+                _mm_storeu_si128(&acc[3 * (r * O_MAX + k + x) + 1], _mm_loadu_si128(&acc[3 * (r * O_MAX + k + x) + 1]) ^ (a0##x & in[1])); \
+                _mm_storeu_si128(&acc[3 * (r * O_MAX + k + x) + 2], _mm_loadu_si128(&acc[3 * (r * O_MAX + k + x) + 2]) ^ (a0##x & in[2])); \
+                _mm_storeu_si128(&acc[3 * (r * O_MAX + k + x) + 0], _mm_loadu_si128(&acc[3 * (r * O_MAX + k + x) + 0]) ^ (a1##x & X1)); \
+                _mm_storeu_si128(&acc[3 * (r * O_MAX + k + x) + 1], _mm_loadu_si128(&acc[3 * (r * O_MAX + k + x) + 1]) ^ (a1##x & X2)); \
+                _mm_storeu_si128(&acc[3 * (r * O_MAX + k + x) + 2], _mm_loadu_si128(&acc[3 * (r * O_MAX + k + x) + 2]) ^ (a1##x & (inrot3[2]))); \
+                _mm_storeu_si128(&acc[3 * (r * O_MAX + k + x) + 0], _mm_loadu_si128(&acc[3 * (r * O_MAX + k + x) + 0]) ^ (a2##x & X3)); \
+                _mm_storeu_si128(&acc[3 * (r * O_MAX + k + x) + 1], _mm_loadu_si128(&acc[3 * (r * O_MAX + k + x) + 1]) ^ (a2##x & X4)); \
+                _mm_storeu_si128(&acc[3 * (r * O_MAX + k + x) + 2], _mm_loadu_si128(&acc[3 * (r * O_MAX + k + x) + 2]) ^ (a2##x & X5)); \
+                _mm_storeu_si128(&acc[3 * (r * O_MAX + k + x) + 0], _mm_loadu_si128(&acc[3 * (r * O_MAX + k + x) + 0]) ^ (a3##x & X6)); \
+                _mm_storeu_si128(&acc[3 * (r * O_MAX + k + x) + 1], _mm_loadu_si128(&acc[3 * (r * O_MAX + k + x) + 1]) ^ (a3##x & X7)); \
+                _mm_storeu_si128(&acc[3 * (r * O_MAX + k + x) + 2], _mm_loadu_si128(&acc[3 * (r * O_MAX + k + x) + 2]) ^ (a3##x & X8)); \
 
                 PART(0)
                 PART(1)

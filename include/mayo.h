@@ -3,6 +3,9 @@
 #ifndef MAYO_H
 #define MAYO_H
 
+#include <stddef.h>
+#include <stdint.h>
+
 #define F_TAIL_LEN 5
 #define F_TAIL_64                                                              \
   { 8, 0, 2, 8, 0 } // f(z) =  z^64         + x^3*z^3 + x*z^2         + x^3
@@ -124,6 +127,7 @@
 #define N_MAX 133
 #define M_MAX 128
 #define O_MAX 18
+#define V_MAX 121
 #define K_MAX 12
 #define Q_MAX 16
 #define PK_SEED_BYTES_MAX 16
@@ -199,6 +203,11 @@ typedef struct {
     int pk_seed_bytes;
     const char *name;
 } mayo_params_t;
+
+typedef struct sk_t {
+    uint32_t p[P1_BYTES_MAX/4 + P2_BYTES_MAX/4];
+    uint8_t o[O_BYTES_MAX];
+} sk_t;
 
 /**
  * MAYO parameter sets
@@ -308,7 +317,7 @@ int mayo_expand_pk(const mayo_params_t *p, const unsigned char *cpk,
  * @return int return code
  */
 int mayo_expand_sk(const mayo_params_t *p, const unsigned char *csk,
-                   unsigned char *esk);
+                   sk_t *esk);
 
 /**
  * Mayo verify signature.
@@ -326,6 +335,6 @@ int mayo_expand_sk(const mayo_params_t *p, const unsigned char *csk,
  */
 int mayo_verify(const mayo_params_t *p, const unsigned char *m,
                 unsigned long long mlen, const unsigned char *sig,
-                unsigned long long siglen, const unsigned char *pk);
+                const unsigned char *pk);
 
 #endif

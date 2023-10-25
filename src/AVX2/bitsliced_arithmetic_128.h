@@ -286,16 +286,24 @@ inline void mayo_5_P1P1t_times_O(const uint32_t *_P1P1t, const unsigned char *O,
 
                 __m256i in0swap = _mm256_permute4x64_epi64(P1P1t[mp+0], 0b01001110);
                 __m256i in1swap = _mm256_permute4x64_epi64(P1P1t[mp+1], 0b01001110);
-                
-                acc[2*(r * O_MAX + k) + 0] ^= (P1P1t[mp+0] & cmask1) ^ (in0swap  & cmask3) 
-                                            ^ (P1P1t[mp+1] & cmask5) ^ (in1swap  & cmask7);
-                acc[2*(r * O_MAX + k) + 1] ^= (P1P1t[mp+1] & cmask2) ^ (in1swap  & cmask4)
-                                            ^ (P1P1t[mp+0] & cmask6) ^ (in0swap  & cmask8);
 
-                acc[2*(r * O_MAX + k + 1) + 0] ^= (P1P1t[mp+0] & cmask12) ^ (in0swap  & cmask32) 
-                                                ^ (P1P1t[mp+1] & cmask52) ^ (in1swap  & cmask72);
-                acc[2*(r * O_MAX + k + 1) + 1] ^= (P1P1t[mp+1] & cmask22) ^ (in1swap  & cmask42)
-                                                ^ (P1P1t[mp+0] & cmask62) ^ (in0swap  & cmask82);
+                _mm256_storeu_si256(&acc[2*(r * O_MAX + k) + 0], _mm256_loadu_si256(&acc[2*(r * O_MAX + k) + 0]) ^ (
+                    (P1P1t[mp+0] & cmask1) ^ (in0swap  & cmask3) 
+                  ^ (P1P1t[mp+1] & cmask5) ^ (in1swap  & cmask7)
+                ));
+                _mm256_storeu_si256(&acc[2*(r * O_MAX + k) + 1], _mm256_loadu_si256(&acc[2*(r * O_MAX + k) + 1]) ^ (
+                    (P1P1t[mp+1] & cmask2) ^ (in1swap  & cmask4) 
+                  ^ (P1P1t[mp+0] & cmask6) ^ (in0swap  & cmask8)
+                ));
+
+                _mm256_storeu_si256(&acc[2*(r * O_MAX + k + 1) + 0], _mm256_loadu_si256(&acc[2*(r * O_MAX + k + 1) + 0]) ^ (
+                    (P1P1t[mp+0] & cmask12) ^ (in0swap  & cmask32) 
+                  ^ (P1P1t[mp+1] & cmask52) ^ (in1swap  & cmask72)
+                ));
+                _mm256_storeu_si256(&acc[2*(r * O_MAX + k + 1) + 1], _mm256_loadu_si256(&acc[2*(r * O_MAX + k + 1) + 1]) ^ (
+                    (P1P1t[mp+1] & cmask22) ^ (in1swap  & cmask42) 
+                  ^ (P1P1t[mp+0] & cmask62) ^ (in0swap  & cmask82)
+                ));
             }
         }
     }
@@ -360,7 +368,7 @@ inline void mayo_5_P1_times_Vt(const uint32_t *_P1, const unsigned char *V, uint
 
                 __m256i in0swap = _mm256_permute4x64_epi64(P1[mp+0], 0b01001110);
                 __m256i in1swap = _mm256_permute4x64_epi64(P1[mp+1], 0b01001110);
-                
+
                 acc[2*(r * K_MAX + k) + 0] ^= (P1[mp+0] & cmask1) ^ (in0swap  & cmask3) 
                                             ^ (P1[mp+1] & cmask5) ^ (in1swap  & cmask7);
                 acc[2*(r * K_MAX + k) + 1] ^= (P1[mp+1] & cmask2) ^ (in1swap  & cmask4)

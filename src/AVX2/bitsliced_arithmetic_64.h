@@ -236,26 +236,43 @@ inline void mayo_12_P1P1t_times_O(const uint32_t *_P1P1t, const unsigned char *O
                 __m256i inshuf2 = _mm256_permute4x64_epi64(P1P1t[r*V_MAX + c], 0b01001110);
                 __m256i inshuf1 = _mm256_shuffle_epi32(P1P1t[r*V_MAX + c], 0b01001110);
                 __m256i inshuf3 = _mm256_shuffle_epi32(inshuf2, 0b01001110); 
+
+                __m256i acc0 = _mm256_loadu_si256(&acc[r * O_MAX + k]);
+                __m256i acc1 = _mm256_loadu_si256(&acc[r * O_MAX + k + 1]);
+                __m256i acc2 = _mm256_loadu_si256(&acc[r * O_MAX + k + 2]);
+                __m256i acc3 = _mm256_loadu_si256(&acc[r * O_MAX + k + 3]);
+
+                _mm256_storeu_si256(&acc[r * O_MAX + k],
+                    acc0 ^ 
+                    (P1P1t[r*V_MAX + c] & cmask1) ^
+                    (inshuf1            & cmask2) ^
+                    (inshuf2            & cmask3) ^
+                    (inshuf3            & cmask4)
+                );
                 
-                acc[r * O_MAX + k] ^= P1P1t[r*V_MAX + c] & cmask1;
-                acc[r * O_MAX + k] ^= inshuf1            & cmask2;
-                acc[r * O_MAX + k] ^= inshuf2            & cmask3;
-                acc[r * O_MAX + k] ^= inshuf3            & cmask4;
+                _mm256_storeu_si256(&acc[r * O_MAX + k + 1],
+                    acc1 ^ 
+                    (P1P1t[r*V_MAX + c] & cmask12) ^
+                    (inshuf1            & cmask22) ^
+                    (inshuf2            & cmask32) ^
+                    (inshuf3            & cmask42)
+                );
 
-                acc[r * O_MAX + k + 1] ^= P1P1t[r*V_MAX + c] & cmask12;
-                acc[r * O_MAX + k + 1] ^= inshuf1            & cmask22;
-                acc[r * O_MAX + k + 1] ^= inshuf2            & cmask32;
-                acc[r * O_MAX + k + 1] ^= inshuf3            & cmask42;
+                _mm256_storeu_si256(&acc[r * O_MAX + k + 2],
+                    acc2 ^ 
+                    (P1P1t[r*V_MAX + c] & cmask13) ^
+                    (inshuf1            & cmask23) ^
+                    (inshuf2            & cmask33) ^
+                    (inshuf3            & cmask43)
+                );
 
-                acc[r * O_MAX + k + 2] ^= P1P1t[r*V_MAX + c] & cmask13;
-                acc[r * O_MAX + k + 2] ^= inshuf1            & cmask23;
-                acc[r * O_MAX + k + 2] ^= inshuf2            & cmask33;
-                acc[r * O_MAX + k + 2] ^= inshuf3            & cmask43;
-
-                acc[r * O_MAX + k + 3] ^= P1P1t[r*V_MAX + c] & cmask14;
-                acc[r * O_MAX + k + 3] ^= inshuf1            & cmask24;
-                acc[r * O_MAX + k + 3] ^= inshuf2            & cmask34;
-                acc[r * O_MAX + k + 3] ^= inshuf3            & cmask44;
+                _mm256_storeu_si256(&acc[r * O_MAX + k + 3],
+                    acc3 ^ 
+                    (P1P1t[r*V_MAX + c] & cmask14) ^
+                    (inshuf1            & cmask24) ^
+                    (inshuf2            & cmask34) ^
+                    (inshuf3            & cmask44)
+                );
             }
         }
         for (; k < (O_MAX/2)*2; k += 2) {
@@ -276,16 +293,25 @@ inline void mayo_12_P1P1t_times_O(const uint32_t *_P1P1t, const unsigned char *O
                 __m256i inshuf2 = _mm256_permute4x64_epi64(P1P1t[r*V_MAX + c], 0b01001110);
                 __m256i inshuf1 = _mm256_shuffle_epi32(P1P1t[r*V_MAX + c], 0b01001110);
                 __m256i inshuf3 = _mm256_shuffle_epi32(inshuf2, 0b01001110); 
-                
-                acc[r * O_MAX + k] ^= P1P1t[r*V_MAX + c] & cmask1;
-                acc[r * O_MAX + k] ^= inshuf1            & cmask2;
-                acc[r * O_MAX + k] ^= inshuf2            & cmask3;
-                acc[r * O_MAX + k] ^= inshuf3            & cmask4;
 
-                acc[r * O_MAX + k + 1] ^= P1P1t[r*V_MAX + c] & cmask12;
-                acc[r * O_MAX + k + 1] ^= inshuf1            & cmask22;
-                acc[r * O_MAX + k + 1] ^= inshuf2            & cmask32;
-                acc[r * O_MAX + k + 1] ^= inshuf3            & cmask42;
+                __m256i acc0 = _mm256_loadu_si256(&acc[r * O_MAX + k]);
+                __m256i acc1 = _mm256_loadu_si256(&acc[r * O_MAX + k + 1]);
+
+                _mm256_storeu_si256(&acc[r * O_MAX + k],
+                    acc0 ^ 
+                    (P1P1t[r*V_MAX + c] & cmask1) ^
+                    (inshuf1            & cmask2) ^
+                    (inshuf2            & cmask3) ^
+                    (inshuf3            & cmask4)
+                );
+
+                _mm256_storeu_si256(&acc[r * O_MAX + k + 1],
+                    acc1 ^ 
+                    (P1P1t[r*V_MAX + c] & cmask12) ^
+                    (inshuf1            & cmask22) ^
+                    (inshuf2            & cmask32) ^
+                    (inshuf3            & cmask42)
+                );
             }
         }
     }
