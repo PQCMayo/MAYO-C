@@ -25,7 +25,7 @@ MAYO-C is a C library implementation of [MAYO](https://pqmayo.org), a multivaria
 
 ## Build
 
-In the `src` directory, execute: 
+In the main directory, execute: 
 
 - `mkdir -p build`
 - `cd build`
