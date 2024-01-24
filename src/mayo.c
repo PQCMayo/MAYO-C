@@ -66,8 +66,10 @@ static void reduce_A_mod_fX(unsigned char *A, int m, int k, int A_cols,
 #define MAYO_POSITION_IN_UPPER_TRIAGONAL_MATRIX(i, j, size)                    \
   (i * size + j - (i * (i + 1) / 2))
 
-
-// Public API
+// Public API for the MAYO scheme:
+// mayo_keypair corresponds to key pair generation
+// mayo_sign corresponds to signature generation
+// mayo_open corresponds to verification of signature
 
 int mayo_keypair(const mayo_params_t *p, unsigned char *pk, unsigned char *sk) {
     int ret = 0;
@@ -339,10 +341,10 @@ int mayo_keypair_compact(const mayo_params_t *p, unsigned char *cpk,
         goto err;
     }
 
-    // S ← shake256(seedsk, pk seed bytes + O bytes)
+    // S ← shake256(seed_sk, pk_seed_bytes + O_bytes)
     shake256(S, param_pk_seed_bytes + param_O_bytes, seed_sk,
              param_sk_seed_bytes);
-    // seed_pk ← s[0 : pk_seed_bytes]
+    // seed_pk ← S[0 : pk_seed_bytes]
     seed_pk = S;
 
     // o ← Decode_o(s[pk_seed_bytes : pk_seed_bytes + o_bytes])
