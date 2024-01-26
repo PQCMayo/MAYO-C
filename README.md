@@ -80,7 +80,7 @@ The default build type uses `-O3 -Wstrict-prototypes -Wno-error=strict-prototype
 
 ## Build artifacts
 
-The following artefacts are built:
+The following artifacts are built:
 
 - `libmayo_common_sys.a`: library with common crypto - AES, Keccak and system random number generator.
 - `libmary_common_test.a`: library with common crypto for deterministic tests - AES, Keccak and CTR-DRBG PRNG.
@@ -89,10 +89,10 @@ The following artefacts are built:
 - `libmayo_<level>_nistapi.a`: library for `MAYO_<level>` against the NIST API.
 - `libmayo_<level>_nistapi_test.a`: library for `MAYO_<level>` against the NIST API. Only for test, using the deterministic CTR-DRBG as backend.
 - `mayo_bench_<param>`: Benchmarking suites.
-- `mayo_test_kat_<param>`: KAT test suites.
-- `mayo_test_scheme_<param>`: Self-test suites.
+- `mayo_test_kat_<param>` (`opt` and `avx2`), `mayo_test_kat` (`ref`): KAT test suites.
+- `mayo_test_scheme_<param>` (`opt` and `avx2`), `mayo_test_scheme` (`ref`): Self-test suites.
 - `PQCgenKAT_sign_<param>`: App for generating NIST KAT.
-- `example_<param>`: Example app using the MAYO API.
+- `example_<param>` (`opt` and `avx2`), `example_mayo` (`ref`): Example app using the MAYO API.
 - `example_nistapi_<param>`: Example app using the NIST API.
 
 ## Test
@@ -119,9 +119,13 @@ KAT verification is done as part of the test harness (see previous section).
 
 ## Benchmarks
 
-A benchmarking suite is built and runs with the following command:
+A benchmarking suite is built and runs with the following command, where `params` specifies the MAYO parameter set and `runs` the number of benchmark runs:
 
-- `test/mayo_bench_<param> <runs>`, where params specifies the MAYO parameter set and runs the number of benchmark runs.
+If `MAYO_BUILD_TYPE` is `opt` or `avx2`:
+- `test/mayo_bench_<param> <runs>`,
+
+If `MAYO_BUILD_TYPE` is `ref`:
+- `test/mayo_bench <param> <runs>`,
 
 The benchmarks profile the `MAYO.CompactKeyGen`, `MAYO.expandSK`, `MAYO.expandSK`, `MAYO.sign` and `MAYO.verify` functions. The results are reported in CPU cycles if available on the host platform, and timing in nanoseconds otherwise.
 
