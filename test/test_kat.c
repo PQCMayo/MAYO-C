@@ -12,7 +12,7 @@ You are solely responsible for determining the appropriateness of using and dist
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <rng.h>
+#include <randombytes.h>
 #include <mayo.h>
 
 #define MAX_MARKER_LEN         50
@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
     }
 end:
 #else
-    rc = test_sig_kat(&MAYO_VARIANT);
+    rc = test_sig_kat(0);
 #endif
     return rc;
 }
@@ -62,14 +62,14 @@ static int test_sig_kat(const mayo_params_t *p) {
     unsigned long long  mlen, smlen, mlen1;
     int                 count;
     int                 done;
-    unsigned char       pk[p->cpk_bytes], sk[p->csk_bytes];
+    unsigned char       pk[PARAM_cpk_bytes(p)], sk[PARAM_csk_bytes(p)];
     int                 ret_val;
 
     char                fn_rsp[64];
     FILE                *fp_rsp;
-    unsigned char       pk_rsp[p->cpk_bytes], sk_rsp[p->csk_bytes];
+    unsigned char       pk_rsp[PARAM_cpk_bytes(p)], sk_rsp[PARAM_csk_bytes(p)];
 
-    sprintf(fn_rsp, "../../KAT/PQCsignKAT_%d_%s.rsp", p->csk_bytes, p->name);
+    sprintf(fn_rsp, "../../KAT/PQCsignKAT_%d_%s.rsp", PARAM_csk_bytes(p), PARAM_name(p));
     if ( (fp_rsp = fopen(fn_rsp, "r")) == NULL ) {
         printf("Couldn't open <%s> for read\n", fn_rsp);
         return KAT_FILE_OPEN_ERROR;
@@ -100,8 +100,8 @@ static int test_sig_kat(const mayo_params_t *p) {
 
         m = (unsigned char *)calloc(mlen, sizeof(unsigned char));
         m1 = (unsigned char *)calloc(mlen, sizeof(unsigned char));
-        sm = (unsigned char *)calloc(mlen + p->sig_bytes, sizeof(unsigned char));
-        sm_rsp = (unsigned char *)calloc(mlen + p->sig_bytes, sizeof(unsigned char));
+        sm = (unsigned char *)calloc(mlen + PARAM_sig_bytes(p), sizeof(unsigned char));
+        sm_rsp = (unsigned char *)calloc(mlen + PARAM_sig_bytes(p), sizeof(unsigned char));
 
         if ( !ReadHex(fp_rsp, m, (int)mlen, "msg = ") ) {
             printf("ERROR: unable to read 'msg' from <%s>\n", fn_rsp);
@@ -113,20 +113,20 @@ static int test_sig_kat(const mayo_params_t *p) {
             printf("crypto_sign_keypair returned <%d>\n", ret_val);
             return KAT_CRYPTO_FAILURE;
         }
-        if ( !ReadHex(fp_rsp, pk_rsp, p->cpk_bytes, "pk = ") ) {
+        if ( !ReadHex(fp_rsp, pk_rsp, PARAM_cpk_bytes(p), "pk = ") ) {
             printf("ERROR: unable to read 'pk' from <%s>\n", fn_rsp);
             return KAT_DATA_ERROR;
         }
-        if ( !ReadHex(fp_rsp, sk_rsp, p->csk_bytes, "sk = ") ) {
+        if ( !ReadHex(fp_rsp, sk_rsp, PARAM_csk_bytes(p), "sk = ") ) {
             printf("ERROR: unable to read 'sk' from <%s>\n", fn_rsp);
             return KAT_DATA_ERROR;
         }
 
-        if (memcmp(pk, pk_rsp, p->cpk_bytes) != 0) {
+        if (memcmp(pk, pk_rsp, PARAM_cpk_bytes(p)) != 0) {
             printf("ERROR: pk is different from <%s>\n", fn_rsp);
             return KAT_VERIFICATION_ERROR;
         }
-        if (memcmp(sk, sk_rsp, p->csk_bytes) != 0) {
+        if (memcmp(sk, sk_rsp, PARAM_csk_bytes(p)) != 0) {
             printf("ERROR: sk is different from <%s>\n", fn_rsp);
             return KAT_VERIFICATION_ERROR;
         }

@@ -2,7 +2,7 @@
 
 #include <mem.h>
 #include <mayo.h>
-#include <rng.h>
+#include <randombytes.h>
 #include <aes_ctr.h>
 #include <arithmetic.h>
 #include <simple_arithmetic.h>
@@ -234,8 +234,8 @@ err:
     return ret;
 }
 
-int mayo_sign(const mayo_params_t *p, unsigned char *sm,
-              unsigned long long *smlen, const unsigned char *m,
+int mayo_sign_signature(const mayo_params_t *p, unsigned char *sig,
+              unsigned long long *siglen, const unsigned char *m,
               unsigned long long mlen, const unsigned char *csk) {
     int ret = MAYO_OK;
     unsigned char tenc[M_BYTES_MAX], t[M_MAX]; // no secret data
@@ -295,13 +295,13 @@ int mayo_sign(const mayo_params_t *p, unsigned char *sm,
 #endif
 
     // choose the randomizer
-    #ifndef PQM4
+    #if defined(PQM4) || defined(HAVE_RANDOMBYTES_NORETVAL)
+    randombytes(tmp + param_digest_bytes, param_salt_bytes);
+    #else
     if (randombytes(tmp + param_digest_bytes, param_salt_bytes) != MAYO_OK) {
         ret = MAYO_ERR;
         goto err;
     }
-    #else
-    randombytes(tmp + param_digest_bytes, param_salt_bytes);
     #endif
 
     // hashing to salt
@@ -360,11 +360,9 @@ int mayo_sign(const mayo_params_t *p, unsigned char *sm,
         mat_add(vi, Ox, s + i * param_n, param_n - param_o, 1);
         memcpy(s + i * param_n + (param_n - param_o), x + i * param_o, param_o);
     }
-    encode(s, sm, param_n * param_k);
-    memcpy(sm + param_sig_bytes - param_salt_bytes, salt, param_salt_bytes);
-    memmove(sm + param_sig_bytes, m,
-           mlen); // assert: smlen == param_k * param_n + mlen
-    *smlen = param_sig_bytes + mlen;
+    encode(s, sig, param_n * param_k);
+    memcpy(sig + param_sig_bytes - param_salt_bytes, salt, param_salt_bytes);
+    *siglen = param_sig_bytes;
 err:
     mayo_secure_clear(V, K_MAX * V_BYTES_MAX + R_BYTES_MAX);
     mayo_secure_clear(Vdec, N_MINUS_O_MAX * K_MAX);
@@ -375,6 +373,22 @@ err:
     mayo_secure_clear(Ox, N_MINUS_O_MAX);
     mayo_secure_clear(tmp,
                       DIGEST_BYTES_MAX + SALT_BYTES_MAX + SK_SEED_BYTES_MAX + 1);
+    return ret;
+}
+
+int mayo_sign(const mayo_params_t *p, unsigned char *sm,
+              unsigned long long *smlen, const unsigned char *m,
+              unsigned long long mlen, const unsigned char *csk) {
+    int ret = MAYO_OK;
+    const int param_sig_bytes = PARAM_sig_bytes(p);
+    unsigned long long siglen = param_sig_bytes;
+    ret = mayo_sign_signature(p, sm, &siglen, m, mlen, csk);
+    if (ret != MAYO_OK || siglen != (unsigned long long) param_sig_bytes)
+        goto err;
+
+    memmove(sm + param_sig_bytes, m, mlen);
+    *smlen = siglen + mlen;
+err:
     return ret;
 }
 
@@ -418,13 +432,13 @@ int mayo_keypair_compact(const mayo_params_t *p, unsigned char *cpk,
     const int param_sk_seed_bytes = PARAM_sk_seed_bytes(p);
 
     // seed_sk $←- B^(sk_seed bytes)
-    #ifndef PQM4
+    #if defined(PQM4) || defined(HAVE_RANDOMBYTES_NORETVAL)
+    randombytes(seed_sk, param_sk_seed_bytes);
+    #else
     if (randombytes(seed_sk, param_sk_seed_bytes) != MAYO_OK) {
         ret = MAYO_ERR;
         goto err;
     }
-    #else
-    randombytes(seed_sk, param_sk_seed_bytes);
     #endif
 
     // S ← shake256(seedsk, pk seed bytes + O bytes)
@@ -444,6 +458,7 @@ int mayo_keypair_compact(const mayo_params_t *p, unsigned char *cpk,
     PK_PRF((unsigned char *)P, param_P1_bytes + param_P2_bytes, seed_pk,
            param_pk_seed_bytes);
 
+
     int m_legs = param_m / 32;
 
     uint64_t *P1 = P;
@@ -462,7 +477,8 @@ int mayo_keypair_compact(const mayo_params_t *p, unsigned char *cpk,
     
     memcpy(cpk + param_pk_seed_bytes, P3_upper, param_P3_bytes);
 
-#ifndef PQM4
+
+#if !defined(PQM4) && !defined(HAVE_RANDOMBYTES_NORETVAL)
 err:
 #endif
     mayo_secure_clear(O, (N_MINUS_O_MAX)*O_MAX);

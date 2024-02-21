@@ -84,7 +84,7 @@ static inline void mayo_generic_m_calculate_PS(const uint64_t *P1, const uint64_
     */
 
     // use more stack efficient version for MAYO_3 and MAYO_5
-    #if defined(PQM4) && N_MAX > 78
+    #if (defined(HAVE_STACKEFFICIENT) || defined(PQM4)) && N_MAX > 78
     uint64_t accumulator[M_MAX * N_MAX] = {0};
     int P1_used;
     int P3_used;

@@ -31,7 +31,7 @@ THE SOFTWARE.
 # define _GNU_SOURCE
 #endif /* defined(__linux__) || defined(__GNU__) */
 
-#include <rng.h>
+#include <randombytes.h>
 
 #if defined(_WIN32)
 /* Windows */

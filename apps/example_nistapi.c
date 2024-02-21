@@ -22,6 +22,7 @@ static int example_mayo(void) {
 
     unsigned long long msglen = 32;
     unsigned long long smlen = CRYPTO_BYTES + msglen;
+    unsigned long long siglen = CRYPTO_BYTES;
 
     unsigned char *pk  = calloc(CRYPTO_PUBLICKEYBYTES, 1);
     unsigned char *sk  = calloc(CRYPTO_SECRETKEYBYTES, 1);
@@ -69,6 +70,39 @@ static int example_mayo(void) {
     memset(msg2, 0, msglen);
     res = crypto_sign_open(msg2, &msglen, sig, smlen, pk);
     if (!res || !memcmp(msg, msg2, msglen)) {
+        printf("FAIL\n");
+        res = -1;
+        goto err;
+    } else {
+        res = 0;
+        printf("OK\n");
+    }
+    
+    printf("crypto_sign_signature -> ");
+    res = crypto_sign_signature(sig, &siglen, msg, msglen, sk);
+    if (res) {
+        printf("FAIL\n");
+        res = -1;
+        goto err;
+    } else {
+        printf("OK\n");
+    }
+
+    printf("crypto_sign_verify (with correct signature) -> ");
+    res = crypto_sign_verify(sig, siglen, msg, msglen, pk);
+    if (res) {
+        printf("FAIL\n");
+        res = -1;
+        goto err;
+    } else {
+        res = 0;
+        printf("OK\n");
+    }
+
+    printf("crypto_sign_verify (with altered signature) -> ");
+    sig[0] = ~sig[0];
+    res = crypto_sign_verify(sig, siglen, msg, msglen, pk);
+    if (!res) {
         printf("FAIL\n");
         res = -1;
         goto err;

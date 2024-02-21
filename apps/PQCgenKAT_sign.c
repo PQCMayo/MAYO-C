@@ -31,7 +31,7 @@ protection within the United States.
 */
 
 #include "api.h"
-#include "rng.h"
+#include "randombytes.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>

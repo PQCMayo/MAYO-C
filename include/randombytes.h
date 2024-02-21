@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef rng_h
-#define rng_h
+#ifndef randombytes_h
+#define randombytes_h
 
 /**
  * Randombytes initialization.
@@ -25,4 +25,4 @@ void randombytes_init(unsigned char *entropy_input,
  */
 int randombytes(unsigned char *x, unsigned long long xlen);
 
-#endif /* rng_h */
+#endif /* randombytes_h */

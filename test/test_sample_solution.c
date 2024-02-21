@@ -8,7 +8,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <rng.h>
+#include <randombytes.h>
 
 static int test_sample_solution(void) {
 

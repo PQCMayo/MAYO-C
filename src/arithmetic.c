@@ -161,8 +161,8 @@ void m_calculate_PS_SPS(const uint64_t *P1, const uint64_t *P2, const uint64_t *
     const int n = o + v;
 
     /* Old approach which is constant time but doesn't have to be */
-    unsigned char S1[V_MAX*K_MAX]; // == N-O, K
-    unsigned char S2[O_MAX*K_MAX]; // == O, K
+    unsigned char S1[V_MAX*K_MAX] = { 0 }; // == N-O, K
+    unsigned char S2[O_MAX*K_MAX] = { 0 }; // == O, K
     unsigned char *s1_write = S1;
     unsigned char *s2_write = S2;
 
