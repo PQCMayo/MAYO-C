@@ -144,3 +144,4 @@ static inline void m_vec_mul_add_x(int m_legs, const uint64_t *in, uint64_t *acc
 }
 
 #endif
+

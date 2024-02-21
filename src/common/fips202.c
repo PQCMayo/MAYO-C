@@ -1090,3 +1090,4 @@ void sha3_512(uint8_t *output, const uint8_t *input, size_t inlen) {
         output[i] = t[i];
     }
 }
+

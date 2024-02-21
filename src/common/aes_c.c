@@ -738,3 +738,4 @@ void AES_256_ECB(const uint8_t *input, const unsigned char *key, unsigned char *
     aes256_ecb(output, input, 1, &ctx);
     aes256_ctx_release(&ctx);
 }
+

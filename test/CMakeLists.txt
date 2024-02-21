@@ -44,3 +44,4 @@ else()
     target_include_directories(mayo_test_sample_solution_MAYO_1 PRIVATE ../include ../src/mayo_1)
     add_test(MAYO_1_SAMPLE_SOLUTION mayo_test_sample_solution_MAYO_1)
 endif()
+

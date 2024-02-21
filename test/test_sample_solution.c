@@ -8,7 +8,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <rng.h>
+#include <randombytes.h>
 
 static int test_sample_solution(void) {
 
@@ -18,8 +18,8 @@ static int test_sample_solution(void) {
     #error "variant not supported"
 #endif
 
-    unsigned long long msglen = 32;
-    unsigned long long smlen = CRYPTO_BYTES + msglen;
+    size_t msglen = 32;
+    size_t smlen = CRYPTO_BYTES + msglen;
 
     unsigned char *pk  = calloc(CRYPTO_PUBLICKEYBYTES, 1);
     unsigned char *sk  = calloc(CRYPTO_SECRETKEYBYTES, 1);
@@ -62,3 +62,4 @@ err:
 int main(int argc, char *argv[]) {
     return test_sample_solution();
 }
+

@@ -31,7 +31,7 @@ protection within the United States.
 */
 
 #include "api.h"
-#include "rng.h"
+#include "randombytes.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,7 +46,7 @@ protection within the United States.
 
 int FindMarker(FILE *infile, const char *marker);
 int ReadHex(FILE *infile, unsigned char *A, int Length, char *str);
-void fprintBstr(FILE *fp, char *S, unsigned char *A, unsigned long long L);
+void fprintBstr(FILE *fp, char *S, unsigned char *A, size_t L);
 
 int main(void) {
   char fn_req[32], fn_rsp[32];
@@ -55,7 +55,7 @@ int main(void) {
   unsigned char msg[3300];
   unsigned char entropy_input[48];
   unsigned char *m, *sm, *m1;
-  unsigned long long mlen, smlen, mlen1;
+  size_t mlen, smlen, mlen1;
   int count;
   int done;
   unsigned char pk[CRYPTO_PUBLICKEYBYTES], sk[CRYPTO_SECRETKEYBYTES];
@@ -84,7 +84,7 @@ int main(void) {
     randombytes(seed, 48);
     fprintBstr(fp_req, "seed = ", seed, 48);
     mlen = 33 * (i + 1);
-    fprintf(fp_req, "mlen = %llu\n", mlen);
+    fprintf(fp_req, "mlen = %zu\n", mlen);
     randombytes(msg, mlen);
     fprintBstr(fp_req, "msg = ", msg, mlen);
     fprintf(fp_req, "pk =\n");
@@ -121,13 +121,13 @@ int main(void) {
     randombytes_init(seed, NULL, 256);
 
     if (FindMarker(fp_req, "mlen = ")) {
-      if (fscanf(fp_req, "%llu", &mlen) != 1)
+      if (fscanf(fp_req, "%zu", &mlen) != 1)
         return KAT_DATA_ERROR;
     } else {
       printf("ERROR: unable to read 'mlen' from <%s>\n", fn_req);
       return KAT_DATA_ERROR;
     }
-    fprintf(fp_rsp, "mlen = %llu\n", mlen);
+    fprintf(fp_rsp, "mlen = %zu\n", mlen);
 
     m = (unsigned char *)calloc(mlen, sizeof(unsigned char));
     m1 = (unsigned char *)calloc(mlen + CRYPTO_BYTES, sizeof(unsigned char));
@@ -151,7 +151,7 @@ int main(void) {
       printf("crypto_sign returned <%d>\n", ret_val);
       return KAT_CRYPTO_FAILURE;
     }
-    fprintf(fp_rsp, "smlen = %llu\n", smlen);
+    fprintf(fp_rsp, "smlen = %zu\n", smlen);
     fprintBstr(fp_rsp, "sm = ", sm, smlen);
     fprintf(fp_rsp, "\n");
 
@@ -162,7 +162,7 @@ int main(void) {
 
     if (mlen != mlen1) {
       printf(
-          "crypto_sign_open returned bad 'mlen': Got <%llu>, expected <%llu>\n",
+          "crypto_sign_open returned bad 'mlen': Got <%zu>, expected <%zu>\n",
           mlen1, mlen);
       return KAT_CRYPTO_FAILURE;
     }
@@ -265,8 +265,8 @@ int ReadHex(FILE *infile, unsigned char *A, int Length, char *str) {
   return 1;
 }
 
-void fprintBstr(FILE *fp, char *S, unsigned char *A, unsigned long long L) {
-  unsigned long long i;
+void fprintBstr(FILE *fp, char *S, unsigned char *A, size_t L) {
+  size_t i;
 
   fprintf(fp, "%s", S);
 
@@ -278,3 +278,4 @@ void fprintBstr(FILE *fp, char *S, unsigned char *A, unsigned long long L) {
 
   fprintf(fp, "\n");
 }
+

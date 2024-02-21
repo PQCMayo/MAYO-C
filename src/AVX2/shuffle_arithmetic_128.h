@@ -195,7 +195,7 @@ inline void mayo_5_Vt_times_L_avx2(const uint64_t *_L, const __m256i *V_multabs,
             __m256i in_even1 = _mm256_srli_epi16(in_odd1, 4) & low_nibble_mask;
             in_odd1 &= low_nibble_mask;
 
-            for (size_t k = 0; k < K_OVER_2; k++)
+            for (k = 0; k < K_OVER_2; k++)
             {
                 temp[4*k]     ^= _mm256_shuffle_epi8(V_multabs[K_OVER_2*r + k], in_odd0);
                 temp[4*k + 1] ^= _mm256_shuffle_epi8(V_multabs[K_OVER_2*r + k], in_even0);
@@ -249,7 +249,7 @@ inline void mayo_5_P1_times_Vt_avx2(const uint64_t *_P1, __m256i *V_multabs, uin
             in_odd1 &= low_nibble_mask;
             cols_used ++;
 
-            for (size_t k = 0; k < K_OVER_2; k++)
+            for (k = 0; k < K_OVER_2; k++)
             {
                 temp[4*k]     ^= _mm256_shuffle_epi8(V_multabs[K_OVER_2*c + k], in_odd0);
                 temp[4*k + 1] ^= _mm256_shuffle_epi8(V_multabs[K_OVER_2*c + k], in_even0);
@@ -300,7 +300,7 @@ inline void mayo_5_Vt_times_Pv_avx2(const uint64_t *_Pv, const __m256i *V_multab
             __m256i in_even1 = _mm256_srli_epi16(in_odd1, 4) & low_nibble_mask;
             in_odd1 &= low_nibble_mask;
 
-            for (size_t k = 0; k < K_OVER_2; k++)
+            for (k = 0; k < K_OVER_2; k++)
             {
                 temp[4*k]     ^= _mm256_shuffle_epi8(V_multabs[K_OVER_2*r + k], in_odd0);
                 temp[4*k + 1] ^= _mm256_shuffle_epi8(V_multabs[K_OVER_2*r + k], in_even0);
@@ -358,7 +358,7 @@ inline void mayo_5_P1_times_S1_plus_P2_times_S2_avx2(const uint64_t *_P1, const 
             in_odd1 &= low_nibble_mask;
             P1_cols_used ++;
 
-            for (size_t k = 0; k < K_OVER_2; k++)
+            for (k = 0; k < K_OVER_2; k++)
             {
                 temp[4*k]     ^= _mm256_shuffle_epi8(S1_multabs[K_OVER_2*c + k], in_odd0);
                 temp[4*k + 1] ^= _mm256_shuffle_epi8(S1_multabs[K_OVER_2*c + k], in_even0);
@@ -377,7 +377,7 @@ inline void mayo_5_P1_times_S1_plus_P2_times_S2_avx2(const uint64_t *_P1, const 
             __m256i in_even1 = _mm256_srli_epi16(in_odd1, 4) & low_nibble_mask;
             in_odd1 &= low_nibble_mask;
 
-            for (size_t k = 0; k < K_OVER_2; k++)
+            for (k = 0; k < K_OVER_2; k++)
             {
                 temp[4*k]     ^= _mm256_shuffle_epi8(S2_multabs[K_OVER_2*c + k], in_odd0);
                 temp[4*k + 1] ^= _mm256_shuffle_epi8(S2_multabs[K_OVER_2*c + k], in_even0);
@@ -432,7 +432,7 @@ inline void mayo_5_P3_times_S2_avx2(const uint64_t *_P3, __m256i *S2_multabs, ui
             in_odd1 &= low_nibble_mask;
             cols_used ++;
 
-            for (size_t k = 0; k < K_OVER_2; k++)
+            for (k = 0; k < K_OVER_2; k++)
             {
                 temp[4*k]     ^= _mm256_shuffle_epi8(S2_multabs[K_OVER_2*c + k], in_odd0);
                 temp[4*k + 1] ^= _mm256_shuffle_epi8(S2_multabs[K_OVER_2*c + k], in_even0);
@@ -488,7 +488,7 @@ inline void mayo_5_S2t_times_PS2_avx2(const uint64_t *_PS2, __m256i *S2_multabs,
             __m256i in_even1 = _mm256_srli_epi16(in_odd1, 4) & low_nibble_mask;
             in_odd1 &= low_nibble_mask;
 
-            for (size_t k = 0; k < K_OVER_2; k++)
+            for (k = 0; k < K_OVER_2; k++)
             {
                 temp[4*k]     ^= _mm256_shuffle_epi8(S2_multabs[K_OVER_2*r + k], in_odd0);
                 temp[4*k + 1] ^= _mm256_shuffle_epi8(S2_multabs[K_OVER_2*r + k], in_even0);
