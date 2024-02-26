@@ -40,7 +40,7 @@ static void encode(const unsigned char *m, unsigned char *menc, int mlen) {
     }
 }
 
-static void compute_rhs(const mayo_params_t *p, const uint64_t *_vPv, unsigned char *t, unsigned char *y){
+static void compute_rhs(const mayo_params_t *p, const uint64_t *_vPv, const unsigned char *t, unsigned char *y){
     #ifndef ENABLE_PARAMS_DYNAMIC
     (void) p;
     #endif
@@ -62,10 +62,18 @@ static void compute_rhs(const mayo_params_t *p, const uint64_t *_vPv, unsigned c
             // reduce mod f(X)
             for (int jj = 0; jj < F_TAIL_LEN; jj++) {
                 if(jj%2 == 0){
+#ifdef TARGET_BIG_ENDIAN
+                    temp_bytes[(((jj/2 + 8) / 8) * 8) - 1 - (jj/2)%8] ^= mul_f(top, PARAM_f_tail(p)[jj]);
+#else
                     temp_bytes[jj/2] ^= mul_f(top, PARAM_f_tail(p)[jj]);
+#endif
                 }
                 else {
+#ifdef TARGET_BIG_ENDIAN
+                    temp_bytes[(((jj/2 + 8) / 8) * 8) - 1 - (jj/2)%8] ^= mul_f(top, PARAM_f_tail(p)[jj]) << 4;
+#else
                     temp_bytes[jj/2] ^= mul_f(top, PARAM_f_tail(p)[jj]) << 4;
+#endif
                 }
             }
 
@@ -80,8 +88,14 @@ static void compute_rhs(const mayo_params_t *p, const uint64_t *_vPv, unsigned c
     // add to y
     for (int i = 0; i < PARAM_m(p); i+=2)
     {
+#ifdef TARGET_BIG_ENDIAN
+        y[i]   = t[i]   ^ (temp_bytes[(((i/2 + 8) / 8) * 8) - 1 - (i/2)%8] & 0xF);
+        y[i+1] = t[i+1] ^ (temp_bytes[(((i/2 + 8) / 8) * 8) - 1 - (i/2)%8] >> 4);
+#else
         y[i]   = t[i]   ^ (temp_bytes[i/2] & 0xF);
         y[i+1] = t[i+1] ^ (temp_bytes[i/2] >> 4);
+#endif
+
     }
 }
 
@@ -208,6 +222,11 @@ static void compute_A(const mayo_params_t *p, const uint64_t *_VtL, unsigned cha
         }
     }
 
+#ifdef TARGET_BIG_ENDIAN
+    for (int i = 0; i < (((PARAM_o(p)*PARAM_k(p)+15)/16)*16)*MAYO_M_OVER_8; ++i) 
+        A[i] = BSWAP64(A[i]);
+#endif
+
     for (int r = 0; r < PARAM_m(p); r+=16)
     {
         for (int c = 0; c < PARAM_A_cols(p)-1 ; c+=16)
@@ -264,6 +283,9 @@ int mayo_sign_signature(const mayo_params_t *p, unsigned char *sig,
     const int param_v_bytes = PARAM_v_bytes(p);
     const int param_r_bytes = PARAM_r_bytes(p);
     const int param_P1_bytes = PARAM_P1_bytes(p);
+#ifdef TARGET_BIG_ENDIAN
+    const int param_P2_bytes = PARAM_P2_bytes(p);
+#endif
     const int param_sig_bytes = PARAM_sig_bytes(p);
     const int param_A_cols = PARAM_A_cols(p);
     const int param_digest_bytes = PARAM_digest_bytes(p);
@@ -286,11 +308,11 @@ int mayo_sign_signature(const mayo_params_t *p, unsigned char *sig,
     alignas (32) uint64_t Mtmp[K_MAX * O_MAX * M_MAX / 16] = {0};
 
 #ifdef TARGET_BIG_ENDIAN
-    for (int i = 0; i < param_P1_bytes / 4; ++i) {
-        P1[i] = BSWAP32(P1[i]);
+    for (int i = 0; i < param_P1_bytes / 8; ++i) {
+        P1[i] = BSWAP64(P1[i]);
     }
-    for (int i = 0; i < param_P2_bytes / 4; ++i) {
-        L[i] = BSWAP32(L[i]);
+    for (int i = 0; i < param_P2_bytes / 8; ++i) {
+        L[i] = BSWAP64(L[i]);
     }
 #endif
 
@@ -535,8 +557,8 @@ int mayo_expand_sk(const mayo_params_t *p, const unsigned char *csk,
     uint64_t *P2 = P + (param_P1_bytes / 8);
 
 #ifdef TARGET_BIG_ENDIAN
-    for (int i = 0; i < (param_P1_bytes + param_P2_bytes) / 4; ++i) {
-        P[i] = BSWAP32(P[i]);
+    for (int i = 0; i < (param_P1_bytes + param_P2_bytes) / 8; ++i) {
+        P[i] = BSWAP64(P[i]);
     }
 #endif
     
@@ -549,8 +571,8 @@ int mayo_expand_sk(const mayo_params_t *p, const unsigned char *csk,
     memcpy(sk->o, S + param_pk_seed_bytes, param_O_bytes);
 
 #ifdef TARGET_BIG_ENDIAN
-    for (int i = 0; i < (param_P1_bytes + param_P2_bytes) / 4; ++i) {
-        P[i] = BSWAP32(P[i]);
+    for (int i = 0; i < (param_P1_bytes + param_P2_bytes) / 8; ++i) {
+        P[i] = BSWAP64(P[i]);
     }
 #endif
 
@@ -594,14 +616,14 @@ int mayo_verify(const mayo_params_t *p, const unsigned char *m,
     uint64_t *P3 = P2 + (param_P2_bytes / 8);
 
 #ifdef TARGET_BIG_ENDIAN
-    for (int i = 0; i < param_P1_bytes / 4; ++i) {
-        P1[i] = BSWAP32(P1[i]);
+    for (int i = 0; i < param_P1_bytes / 8; ++i) {
+        P1[i] = BSWAP64(P1[i]);
     }
-    for (int i = 0; i < param_P2_bytes / 4; ++i) {
-        P2[i] = BSWAP32(P2[i]);
+    for (int i = 0; i < param_P2_bytes / 8; ++i) {
+        P2[i] = BSWAP64(P2[i]);
     }
-    for (int i = 0; i < param_P3_bytes / 4; ++i) {
-        P3[i] = BSWAP32(P3[i]);
+    for (int i = 0; i < param_P3_bytes / 8; ++i) {
+        P3[i] = BSWAP64(P3[i]);
     }
 #endif
 

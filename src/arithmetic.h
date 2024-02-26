@@ -8,6 +8,10 @@
 #include <mayo.h>
 #include <stdint.h>
 
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#define TARGET_BIG_ENDIAN
+#endif
+
 #if defined(MAYO_AVX) && (M_MAX == 64)
     #include <shuffle_arithmetic_64.h>
 #endif

@@ -12,6 +12,7 @@ elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "^(s390x.*|S390X.*)")
     add_definitions(-DTARGET_S390X)
     add_definitions(-DTARGET_BIG_ENDIAN)
 else()
+    message("other")
     add_definitions(-DTARGET_OTHER)
 endif()
 
