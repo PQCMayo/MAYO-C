@@ -380,7 +380,7 @@ static int randombytes_select(void *buf, size_t n)
 #endif
 }
 
-int randombytes(unsigned char *x, unsigned long long xlen) {
+int randombytes(unsigned char *x, size_t xlen) {
 
     int ret = randombytes_select(x, (size_t) xlen);
 #ifdef ENABLE_CT_TESTING

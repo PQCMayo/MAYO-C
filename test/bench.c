@@ -102,7 +102,7 @@ static int bench_sig(const mayo_params_t *p, int runs, int csv) {
     sk_t *esk  = calloc(sizeof(sk_t), 1);
     unsigned char *sig = calloc(PARAM_sig_bytes(p) + m_len, 1);
     unsigned char *m   = calloc(m_len, 1);
-    unsigned long long len = PARAM_sig_bytes(p);
+    size_t len = PARAM_sig_bytes(p);
 
     if (csv) {
         printf("%s,", PARAM_name(p));

@@ -4,6 +4,7 @@
 #define MAYO_H
 
 #include <stdint.h>
+#include <stdlib.h>
 
 #define F_TAIL_LEN 5
 #define F_TAIL_64                                                              \
@@ -321,8 +322,8 @@ int mayo_keypair(const mayo_params_t *p, unsigned char *pk, unsigned char *sk);
 
 #define mayo_sign_signature MAYO_NAMESPACE(mayo_sign_signature)
 int mayo_sign_signature(const mayo_params_t *p, unsigned char *sig,
-              unsigned long long *siglen, const unsigned char *m,
-              unsigned long long mlen, const unsigned char *csk);
+              size_t *siglen, const unsigned char *m,
+              size_t mlen, const unsigned char *csk);
 
 /**
  * MAYO signature generation.
@@ -341,8 +342,8 @@ int mayo_sign_signature(const mayo_params_t *p, unsigned char *sig,
  */
 #define mayo_sign MAYO_NAMESPACE(mayo_sign)
 int mayo_sign(const mayo_params_t *p, unsigned char *sm,
-              unsigned long long *smlen, const unsigned char *m,
-              unsigned long long mlen, const unsigned char *sk);
+              size_t *smlen, const unsigned char *m,
+              size_t mlen, const unsigned char *sk);
 
 /**
  * Mayo open signature.
@@ -361,8 +362,8 @@ int mayo_sign(const mayo_params_t *p, unsigned char *sm,
  */
 #define mayo_open MAYO_NAMESPACE(mayo_open)
 int mayo_open(const mayo_params_t *p, unsigned char *m,
-              unsigned long long *mlen, const unsigned char *sm,
-              unsigned long long smlen, const unsigned char *pk);
+              size_t *mlen, const unsigned char *sm,
+              size_t smlen, const unsigned char *pk);
 
 /**
  * Mayo compact keypair generation.
@@ -427,7 +428,7 @@ int mayo_expand_sk(const mayo_params_t *p, const unsigned char *csk,
  */
 #define mayo_verify MAYO_NAMESPACE(mayo_verify)
 int mayo_verify(const mayo_params_t *p, const unsigned char *m,
-                unsigned long long mlen, const unsigned char *sig,
+                size_t mlen, const unsigned char *sig,
                 const unsigned char *pk);
 
 #endif

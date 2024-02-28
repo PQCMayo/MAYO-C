@@ -24,8 +24,8 @@
  */
 static int example_mayo(const mayo_params_t* p) {
 
-    unsigned long long msglen = 32;
-    unsigned long long smlen = PARAM_sig_bytes(p) + msglen;
+    size_t msglen = 32;
+    size_t smlen = PARAM_sig_bytes(p) + msglen;
 
     unsigned char *pk  = calloc(PARAM_cpk_bytes(p), 1);
     unsigned char *sk  = calloc(PARAM_csk_bytes(p), 1);

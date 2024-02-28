@@ -20,9 +20,9 @@
  */
 static int example_mayo(void) {
 
-    unsigned long long msglen = 32;
-    unsigned long long smlen = CRYPTO_BYTES + msglen;
-    unsigned long long siglen = CRYPTO_BYTES;
+    size_t msglen = 32;
+    size_t smlen = CRYPTO_BYTES + msglen;
+    size_t siglen = CRYPTO_BYTES;
 
     unsigned char *pk  = calloc(CRYPTO_PUBLICKEYBYTES, 1);
     unsigned char *sk  = calloc(CRYPTO_SECRETKEYBYTES, 1);

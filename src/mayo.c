@@ -254,8 +254,8 @@ err:
 }
 
 int mayo_sign_signature(const mayo_params_t *p, unsigned char *sig,
-              unsigned long long *siglen, const unsigned char *m,
-              unsigned long long mlen, const unsigned char *csk) {
+              size_t *siglen, const unsigned char *m,
+              size_t mlen, const unsigned char *csk) {
     int ret = MAYO_OK;
     unsigned char tenc[M_BYTES_MAX], t[M_MAX]; // no secret data
     unsigned char y[M_MAX];                    // secret data
@@ -399,13 +399,13 @@ err:
 }
 
 int mayo_sign(const mayo_params_t *p, unsigned char *sm,
-              unsigned long long *smlen, const unsigned char *m,
-              unsigned long long mlen, const unsigned char *csk) {
+              size_t *smlen, const unsigned char *m,
+              size_t mlen, const unsigned char *csk) {
     int ret = MAYO_OK;
     const int param_sig_bytes = PARAM_sig_bytes(p);
-    unsigned long long siglen = param_sig_bytes;
+    size_t siglen = param_sig_bytes;
     ret = mayo_sign_signature(p, sm, &siglen, m, mlen, csk);
-    if (ret != MAYO_OK || siglen != (unsigned long long) param_sig_bytes)
+    if (ret != MAYO_OK || siglen != (size_t) param_sig_bytes)
         goto err;
 
     memmove(sm + param_sig_bytes, m, mlen);
@@ -415,10 +415,10 @@ err:
 }
 
 int mayo_open(const mayo_params_t *p, unsigned char *m,
-              unsigned long long *mlen, const unsigned char *sm,
-              unsigned long long smlen, const unsigned char *pk) {
+              size_t *mlen, const unsigned char *sm,
+              size_t smlen, const unsigned char *pk) {
     const int param_sig_bytes = PARAM_sig_bytes(p);
-    if (smlen < (unsigned long long)param_sig_bytes) {
+    if (smlen < (size_t)param_sig_bytes) {
         return MAYO_ERR;
     }
     int result = mayo_verify(p, sm + param_sig_bytes, smlen - param_sig_bytes, sm,
@@ -582,7 +582,7 @@ int mayo_expand_sk(const mayo_params_t *p, const unsigned char *csk,
 }
 
 int mayo_verify(const mayo_params_t *p, const unsigned char *m,
-                unsigned long long mlen, const unsigned char *sig,
+                size_t mlen, const unsigned char *sig,
                 const unsigned char *cpk) {
     unsigned char tEnc[M_BYTES_MAX];
     unsigned char t[M_MAX];

@@ -47,7 +47,7 @@ static int test_mayo(const mayo_params_t *p) {
     unsigned char *msg = (unsigned char *) ((uintptr_t)_msg | (uintptr_t)1);
 
     unsigned char seed[48] = { 0 };
-    unsigned long long msglen = 32;
+    size_t msglen = 32;
 
     randombytes_init(seed, NULL, 256);
 
@@ -63,7 +63,7 @@ static int test_mayo(const mayo_params_t *p) {
     VALGRIND_MAKE_MEM_DEFINED(pk, PARAM_cpk_bytes(p));
 #endif
 
-    unsigned long long smlen = PARAM_sig_bytes(p) + 32;
+    size_t smlen = PARAM_sig_bytes(p) + 32;
 
     res = mayo_sign(p, sig, &smlen, msg, 32, sk);
     if (res != MAYO_OK) {

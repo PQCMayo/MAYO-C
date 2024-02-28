@@ -16,29 +16,29 @@ crypto_sign_keypair(unsigned char *pk, unsigned char *sk) {
 
 #ifndef PQM4
 int
-crypto_sign(unsigned char *sm, unsigned long long *smlen,
-            const unsigned char *m, unsigned long long mlen,
+crypto_sign(unsigned char *sm, size_t *smlen,
+            const unsigned char *m, size_t mlen,
             const unsigned char *sk) {
     return mayo_sign(MAYO_PARAMS, sm, smlen, m, mlen, sk);
 }
 
 int
 crypto_sign_signature(unsigned char *sig,
-              unsigned long long *siglen, const unsigned char *m,
-              unsigned long long mlen, const unsigned char *sk) {
+              size_t *siglen, const unsigned char *m,
+              size_t mlen, const unsigned char *sk) {
     return mayo_sign_signature(MAYO_PARAMS, sig, siglen, m, mlen, sk);
 }
 
 int
-crypto_sign_open(unsigned char *m, unsigned long long *mlen,
-                 const unsigned char *sm, unsigned long long smlen,
+crypto_sign_open(unsigned char *m, size_t *mlen,
+                 const unsigned char *sm, size_t smlen,
                  const unsigned char *pk) {
     return mayo_open(MAYO_PARAMS, m, mlen, sm, smlen, pk);
 }
 
 int
-crypto_sign_verify(const unsigned char *sig, unsigned long long siglen,
-                   const unsigned char *m, unsigned long long mlen,
+crypto_sign_verify(const unsigned char *sig, size_t siglen,
+                   const unsigned char *m, size_t mlen,
                    const unsigned char *pk) {
     if (siglen != CRYPTO_BYTES)
         return -1;
@@ -50,7 +50,7 @@ crypto_sign(unsigned char *sm, size_t *smlen,
             const unsigned char *m, size_t mlen,
             const unsigned char *sk) {
 
-    unsigned long long smlen_ll;
+    size_t smlen_ll;
     int rc = mayo_sign(MAYO_PARAMS, sm, &smlen_ll, m, mlen, sk);
     *smlen = smlen_ll;
     return rc;
@@ -60,7 +60,7 @@ int
 crypto_sign_open(unsigned char *m, size_t *mlen,
                  const unsigned char *sm, size_t smlen,
                  const unsigned char *pk) {
-    unsigned long long mlen_ll;
+    size_t mlen_ll;
     int rc = mayo_open(MAYO_PARAMS, m, &mlen_ll, sm, smlen, pk);
     *mlen = mlen_ll;
     return rc;
