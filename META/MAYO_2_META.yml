@@ -19,7 +19,7 @@ implementations:
     signature_keypair: pqmayo_MAYO_2_opt_crypto_sign_keypair
     signature_signature: pqmayo_MAYO_2_opt_crypto_sign_signature
     signature_verify: pqmayo_MAYO_2_opt_crypto_sign_verify
-    sources: LICENSE NOTICE ./src/arithmetic.c ./src/mayo_2/api.c ./src/common/aes128ctr.c ./src/params.c ./src/mayo.c ./include/mayo.h ./include/mem.h ./src/mayo_2/api.h ./src/simple_arithmetic.h ./src/generic/arithmetic_common.h ./src/generic/echelon_form.h ./src/generic/arithmetic_96.h ./src/generic/arithmetic_64.h ./src/generic/arithmetic_128.h ./src/arithmetic.h ./src/common/aes_ctr.h
+    sources: LICENSE NOTICE ./src/arithmetic.c ./src/mayo_2/api.c ./src/params.c ./src/mayo.c ./include/mayo.h ./include/mem.h ./src/mayo_2/api.h ./src/simple_arithmetic.h ./src/generic/arithmetic_common.h ./src/generic/echelon_form.h ./src/generic/arithmetic_96.h ./src/generic/arithmetic_64.h ./src/generic/arithmetic_128.h ./src/arithmetic.h ./src/common/aes_ctr.h
   - name: avx2
     version: https://github.com/PQCMayo/MAYO-C/tree/nibbling-mayo
     folder_name: .
@@ -27,7 +27,7 @@ implementations:
     signature_keypair: pqmayo_MAYO_2_avx2_crypto_sign_keypair
     signature_signature: pqmayo_MAYO_2_avx2_crypto_sign_signature
     signature_verify: pqmayo_MAYO_2_avx2_crypto_sign_verify
-    sources: LICENSE NOTICE ./src/arithmetic.c ./src/mayo_2/api.c ./src/common/aes128ctr.c ./src/params.c ./src/mayo.c ./include/mayo.h ./include/mem.h ./src/mayo_2/api.h ./src/simple_arithmetic.h ./src/arithmetic.h ./src/common/aes_ctr.h ./src/AVX2/arithmetic_128.h ./src/AVX2/arithmetic_96.h ./src/AVX2/echelon_form.h ./src/AVX2/shuffle_arithmetic_128.h ./src/AVX2/shuffle_arithmetic_96.h ./src/AVX2/arithmetic_64.h ./src/AVX2/arithmetic_common.h ./src/AVX2/echelon_form_loop.h ./src/AVX2/shuffle_arithmetic_64.h
+    sources: LICENSE NOTICE ./src/arithmetic.c ./src/mayo_2/api.c ./src/params.c ./src/mayo.c ./include/mayo.h ./include/mem.h ./src/mayo_2/api.h ./src/simple_arithmetic.h ./src/arithmetic.h ./src/common/aes_ctr.h ./src/AVX2/arithmetic_128.h ./src/AVX2/arithmetic_96.h ./src/AVX2/echelon_form.h ./src/AVX2/shuffle_arithmetic_128.h ./src/AVX2/shuffle_arithmetic_96.h ./src/AVX2/arithmetic_64.h ./src/AVX2/arithmetic_common.h ./src/AVX2/echelon_form_loop.h ./src/AVX2/shuffle_arithmetic_64.h
     supported_platforms:
       - architecture: x86_64
         operating_systems:
