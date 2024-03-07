@@ -28,3 +28,4 @@ foreach(MVARIANT ${MVARIANT_S})
     target_link_libraries(example_nistapi_${MVARIANT_LOWER} PRIVATE ${MVARIANT_LOWER}_nistapi)
     target_include_directories(example_nistapi_${MVARIANT_LOWER} PRIVATE ../include ../src/${MVARIANT_LOWER})
 endforeach()
+

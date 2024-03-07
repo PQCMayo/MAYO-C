@@ -278,3 +278,4 @@ void fprintBstr(FILE *fp, char *S, unsigned char *A, size_t L) {
 
   fprintf(fp, "\n");
 }
+
