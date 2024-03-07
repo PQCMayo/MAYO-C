@@ -324,3 +324,4 @@ int sample_solution(const mayo_params_t *p, unsigned char *A,
     }
     return 1;
 }
+

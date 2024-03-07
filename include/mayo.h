@@ -432,3 +432,4 @@ int mayo_verify(const mayo_params_t *p, const unsigned char *m,
                 const unsigned char *pk);
 
 #endif
+

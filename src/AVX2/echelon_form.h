@@ -85,3 +85,4 @@ static inline void EF(unsigned char *A, int _nrows, int _ncols) {
     mayo_secure_clear(_pivot_row, AVX_REGS_PER_ROW * 32);
     mayo_secure_clear(A_avx, AVX_REGS_PER_ROW * 32 * nrows);
 }
+

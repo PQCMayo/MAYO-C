@@ -9,3 +9,4 @@ int shake128(unsigned char *output, size_t outputByteLen, const unsigned char *i
 int shake256(unsigned char *output, size_t outputByteLen, const unsigned char *input, size_t inputByteLen);
 
 #endif
+

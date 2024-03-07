@@ -269,3 +269,4 @@ ReadHex(FILE *infile, unsigned char *A, int Length, char *str) {
 
     return 1;
 }
+

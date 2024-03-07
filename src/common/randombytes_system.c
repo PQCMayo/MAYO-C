@@ -396,3 +396,4 @@ void randombytes_init(unsigned char *entropy_input,
     (void) personalization_string;
     (void) security_strength;
 }
+

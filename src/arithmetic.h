@@ -59,3 +59,4 @@ void m_calculate_PS_SPS(const uint64_t *P1, const uint64_t *P2, const uint64_t *
                               const int m, const int v, const int o, const int k, uint64_t *SPS);
 
 #endif
+

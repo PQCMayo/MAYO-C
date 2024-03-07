@@ -55,3 +55,4 @@ crypto_sign_open(unsigned char *m, size_t *mlen,
 #endif
 
 #endif /* api_h */
+

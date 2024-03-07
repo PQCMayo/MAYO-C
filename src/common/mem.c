@@ -16,3 +16,4 @@ void mayo_secure_clear(void *mem, size_t size) {
     static volatile memset_t memset_func = memset;
     memset_func(mem, 0, size);
 }
+

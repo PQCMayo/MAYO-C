@@ -59,3 +59,4 @@ void mayo_secure_free(void *mem, size_t size);
 void mayo_secure_clear(void *mem, size_t size);
 
 #endif
+

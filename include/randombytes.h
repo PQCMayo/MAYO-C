@@ -28,3 +28,4 @@ void randombytes_init(unsigned char *entropy_input,
 int randombytes(unsigned char *x, size_t xlen);
 
 #endif /* randombytes_h */
+

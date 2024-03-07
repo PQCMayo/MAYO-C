@@ -160,3 +160,4 @@ static inline int64_t cpucycles(void) {
     return (int64_t)(time.tv_sec * 1e9 + time.tv_nsec);
 #endif
 }
+

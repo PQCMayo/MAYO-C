@@ -653,3 +653,4 @@ int mayo_verify(const mayo_params_t *p, const unsigned char *m,
     }
     return MAYO_ERR; // bad signature
 }
+

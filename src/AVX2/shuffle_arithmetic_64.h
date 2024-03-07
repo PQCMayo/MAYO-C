@@ -478,3 +478,4 @@ void mayo12_m_upper(int m_legs, const uint64_t *in, uint64_t *out, int size) {
 
 #undef K_OVER_2
 #endif
+

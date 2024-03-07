@@ -138,3 +138,4 @@ randombytes_init(unsigned char *entropy_input,
                  int security_strength) {
     return randombytes_init_nist(entropy_input, personalization_string, security_strength);
 }
+

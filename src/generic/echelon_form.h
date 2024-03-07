@@ -149,3 +149,4 @@ static inline void EF(unsigned char *A, int nrows, int ncols) {
 }
 
 #endif
+
