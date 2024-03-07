@@ -78,6 +78,7 @@ void P1P1t_times_O(const mayo_params_t* p, const uint64_t* P1, const unsigned ch
 }
 
 void V_times_L__V_times_P1_times_Vt(const mayo_params_t* p, const uint64_t* L, const unsigned char* V, uint64_t* M, const uint64_t* P1, uint64_t* Y) {
+    (void) p;
 #if MAYO_AVX && defined(MAYO_VARIANT) && M_MAX == 64
     __m256i V_multabs[(K_MAX+1)/2*V_MAX];
     alignas (32) uint64_t Pv[N_MINUS_O_MAX * K_MAX * M_MAX / 16] = {0};
@@ -121,6 +122,7 @@ void V_times_L__V_times_P1_times_Vt(const mayo_params_t* p, const uint64_t* L, c
 }
 
 void Ot_times_P1O_P2(const mayo_params_t* p, const uint64_t* P1, const unsigned char* O, uint64_t* P1O_P2, uint64_t* P3) {
+    (void) p;
 #if MAYO_AVX && defined(MAYO_VARIANT) && M_MAX == 64
     __m256i O_multabs[O_MAX/2*V_MAX];
     mayo_O_multabs_avx2(O, O_multabs);
@@ -157,6 +159,7 @@ void Ot_times_P1O_P2(const mayo_params_t* p, const uint64_t* P1, const unsigned 
 //                               [         P3*S2 = P2 ]
 void m_calculate_PS_SPS(const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, const unsigned char *S,
                               const int m, const int v, const int o, const int k, uint64_t *SPS) {
+    (void) m;
 #if MAYO_AVX
     const int n = o + v;
 
