@@ -466,4 +466,3 @@ static inline void mul_add_mat_x_m_mat(int m_legs, const unsigned char *mat, con
     }
 }
 #endif
-
