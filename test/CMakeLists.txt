@@ -32,6 +32,9 @@ else()
         target_link_libraries(mayo_test_scheme_${MVARIANT} ${MVARIANT_LOWER})
         target_include_directories(mayo_test_scheme_${MVARIANT} PUBLIC ../src/common ${INC_PLATFORM})
 
+        add_executable(mayo_bench_table3_${MVARIANT} bench_mayo_table3.c)
+        target_link_libraries(mayo_bench_table3_${MVARIANT} ${MVARIANT_LOWER})
+
         add_test(${MVARIANT}_KAT mayo_test_kat_${MVARIANT} ${MVARIANT})
         add_test(${MVARIANT}_SELFTEST mayo_test_scheme_${MVARIANT} ${MVARIANT})
     ENDFOREACH()
