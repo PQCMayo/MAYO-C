@@ -6,6 +6,7 @@ project(MAYO VERSION 1.0 LANGUAGES C CXX ASM)
 set(MAYO_SO_VERSION "0")
 set(CMAKE_C_STANDARD 99)
 
+set_property(GLOBAL PROPERTY CTEST_TARGETS_ADDED 1)
 include(CTest)
 
 option(ENABLE_STRICT "Build with strict compile options." ON)
@@ -19,7 +20,8 @@ option(ENABLE_CT_TESTING  "Enable compilation for constant time testing." OFF)
 option(SOURCE_PATH "Where the source code is stored, default in the building tree" OFF)
 #option(ENABLE_PARAMS_DYNAMIC "Enable dynamic use of MAYO parameters" OFF)
 
-SET(MVARIANT_S "MAYO_1;MAYO_2;MAYO_3;MAYO_5")
+SET(MVARIANT_S "MAYO_1")
+# SET(MVARIANT_S "MAYO_1;MAYO_2;MAYO_3;MAYO_5")
 
 include(.cmake/flags.cmake)
 include(.cmake/sanitizers.cmake)
