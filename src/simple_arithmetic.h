@@ -69,25 +69,6 @@ static inline unsigned char lincomb(const unsigned char *a,
     return ret;
 }
 
-static inline unsigned char lincomb_transpose_a(const unsigned char *a,
-        const unsigned char *b, int n,
-        int m, int o) {
-    unsigned char ret = 0;
-    for (int i = 0; i < n; ++i, a += m, b += o) {
-        ret = add_f(mul_f(*a, *b), ret);
-    }
-    return ret;
-}
-
-static inline unsigned char lincomb_transpose_b(const unsigned char *a,
-        const unsigned char *b, int n) {
-    unsigned char ret = 0;
-    for (int i = 0; i < n; ++i) {
-        ret = add_f(mul_f(a[i], b[i]), ret);
-    }
-    return ret;
-}
-
 static inline void mat_mul(const unsigned char *a, const unsigned char *b,
                     unsigned char *c, int colrow_ab, int row_a, int col_b) {
     for (int i = 0; i < row_a; ++i, a += colrow_ab) {
