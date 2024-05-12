@@ -55,3 +55,4 @@ for (int row = pivot_row_lower_bound; row < nrows; row++) {
 }
 
 pivot_row += (-(int32_t)(~pivot_is_zero));
+

@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
         goto end;
     }
     int runs = atoi(argv[1]);
-    rc = bench_sig(&MAYO_VARIANT, runs, 0);
+    rc = bench_sig(0, runs, 0);
 #endif
 
 
@@ -87,8 +87,11 @@ int cmpfunc (const void *a, const void *b) {
 
 #define LIST_SIZE 10000
 
+#define Ot_times_P1O_P2 MAYO_NAMESPACE(Ot_times_P1O_P2)
 extern void Ot_times_P1O_P2(const mayo_params_t* p, const uint64_t* P1, const unsigned char* O, uint64_t* P1O_P2, uint64_t* P3);
+#define V_times_L__V_times_P1_times_Vt MAYO_NAMESPACE(V_times_L__V_times_P1_times_Vt)
 extern void V_times_L__V_times_P1_times_Vt(const mayo_params_t* p, const uint64_t* L, const unsigned char* V, uint64_t* M, const uint64_t* P1, uint64_t* Y);
+#define m_calculate_PS_SPS MAYO_NAMESPACE(m_calculate_PS_SPS)
 extern void m_calculate_PS_SPS(const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, const unsigned char *S,
                               const int m, const int v, const int o, const int k, uint64_t *SPS);
 
@@ -115,9 +118,9 @@ static int bench_sig(const mayo_params_t *p, int runs, int csv) {
 
 
     if (csv) {
-        printf("%s,", p->name);
+        printf("%s,", PARAM_name(p));
     } else {
-        printf("Benchmarking %s\n", p->name);
+        printf("Benchmarking %s\n", PARAM_name(p));
     }
 
     BENCH_CODE_1(runs);

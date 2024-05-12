@@ -1,0 +1,37 @@
+name: MAYO_5
+type: signature
+claimed-nist-level: 5
+length-public-key: 5008
+length-secret-key: 40
+length-signature: 838
+nistkat-sha256: f2c1c69045c7d15e714a04119965e8a7007ef54f9293158587560227c97b237d
+principal-submitters:
+  - Ward Beullens
+  - Fabio Campos
+  - Sofía Celi
+  - Basil Hess
+  - Matthias J. Kannwischer
+implementations:
+  - name: opt
+    version: https://github.com/PQCMayo/MAYO-C/tree/nibbling-mayo
+    folder_name: .
+    compile_opts: -DMAYO_VARIANT=MAYO_5 -DMAYO_BUILD_TYPE_OPT -DHAVE_RANDOMBYTES_NORETVAL -DHAVE_STACKEFFICIENT
+    signature_keypair: pqmayo_MAYO_5_opt_crypto_sign_keypair
+    signature_signature: pqmayo_MAYO_5_opt_crypto_sign_signature
+    signature_verify: pqmayo_MAYO_5_opt_crypto_sign_verify
+    sources: LICENSE NOTICE ./src/arithmetic.c ./src/mayo_5/api.c ./src/params.c ./src/mayo.c ./include/mayo.h ./include/mem.h ./src/mayo_5/api.h ./src/simple_arithmetic.h ./src/generic/arithmetic_common.h ./src/generic/echelon_form.h ./src/generic/arithmetic_96.h ./src/generic/arithmetic_64.h ./src/generic/arithmetic_128.h ./src/arithmetic.h ./src/common/aes_ctr.h
+  - name: avx2
+    version: https://github.com/PQCMayo/MAYO-C/tree/nibbling-mayo
+    folder_name: .
+    compile_opts: -DMAYO_VARIANT=MAYO_5 -DMAYO_BUILD_TYPE_AVX2 -DMAYO_AVX -DHAVE_RANDOMBYTES_NORETVAL -DHAVE_STACKEFFICIENT
+    signature_keypair: pqmayo_MAYO_5_avx2_crypto_sign_keypair
+    signature_signature: pqmayo_MAYO_5_avx2_crypto_sign_signature
+    signature_verify: pqmayo_MAYO_5_avx2_crypto_sign_verify
+    sources: LICENSE NOTICE ./src/arithmetic.c ./src/mayo_5/api.c ./src/params.c ./src/mayo.c ./include/mayo.h ./include/mem.h ./src/mayo_5/api.h ./src/simple_arithmetic.h ./src/arithmetic.h ./src/common/aes_ctr.h ./src/AVX2/arithmetic_128.h ./src/AVX2/arithmetic_96.h ./src/AVX2/echelon_form.h ./src/AVX2/shuffle_arithmetic_128.h ./src/AVX2/shuffle_arithmetic_96.h ./src/AVX2/arithmetic_64.h ./src/AVX2/arithmetic_common.h ./src/AVX2/echelon_form_loop.h ./src/AVX2/shuffle_arithmetic_64.h
+    supported_platforms:
+      - architecture: x86_64
+        operating_systems:
+          - Darwin
+          - Linux
+        required_flags:
+          - avx2

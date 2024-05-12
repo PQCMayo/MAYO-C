@@ -172,3 +172,4 @@ static inline uint64_t gf16v_mul_u64( uint64_t a, uint8_t b ) {
 }
 
 #endif
+

@@ -71,3 +71,4 @@ inline void multiply_bins_96(uint64_t *bins, uint64_t *out) {
 }
 
 #endif
+

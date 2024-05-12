@@ -2,6 +2,7 @@
 
 #include <mayo.h>
 
+#ifdef ENABLE_PARAMS_DYNAMIC
 static const unsigned char f_tail_64[] = F_TAIL_64;
 static const unsigned char f_tail_96[] = F_TAIL_96;
 static const unsigned char f_tail_128[] = F_TAIL_128;
@@ -37,3 +38,5 @@ MAYO_GEN_PARAMS(MAYO_1);
 MAYO_GEN_PARAMS(MAYO_2);
 MAYO_GEN_PARAMS(MAYO_3);
 MAYO_GEN_PARAMS(MAYO_5);
+#endif
+

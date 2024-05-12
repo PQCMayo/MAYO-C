@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <rng.h>
+#include <randombytes.h>
 #include <mayo.h>
 #include <stdalign.h>
 
@@ -47,11 +47,11 @@ static int test_mayo(const mayo_params_t *p) {
     unsigned char *msg = (unsigned char *) ((uintptr_t)_msg | (uintptr_t)1);
 
     unsigned char seed[48] = { 0 };
-    unsigned long long msglen = 32;
+    size_t msglen = 32;
 
     randombytes_init(seed, NULL, 256);
 
-    printf("Testing Keygen, Sign, Open: %s\n", p->name);
+    printf("Testing Keygen, Sign, Open: %s\n", PARAM_name(p));
 
     int res = mayo_keypair(p, pk, sk);
     if (res != MAYO_OK) {
@@ -60,10 +60,10 @@ static int test_mayo(const mayo_params_t *p) {
     }
 
 #ifdef ENABLE_CT_TESTING
-    VALGRIND_MAKE_MEM_DEFINED(pk, p->cpk_bytes);
+    VALGRIND_MAKE_MEM_DEFINED(pk, PARAM_cpk_bytes(p));
 #endif
 
-    unsigned long long smlen = p->sig_bytes + 32;
+    size_t smlen = PARAM_sig_bytes(p) + 32;
 
     res = mayo_sign(p, sig, &smlen, msg, 32, sk);
     if (res != MAYO_OK) {
@@ -72,9 +72,9 @@ static int test_mayo(const mayo_params_t *p) {
     }
 
     printf("pk: ");
-    print_hex(pk, p->cpk_bytes);
+    print_hex(pk, PARAM_cpk_bytes(p));
     printf("sk: ");
-    print_hex(sk, p->csk_bytes);
+    print_hex(sk, PARAM_csk_bytes(p));
     printf("sm: ");
     print_hex(sig, smlen);
 
@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
         rc = test_mayo(&MAYO_5);
     }
 #else
-    rc = test_mayo(&MAYO_VARIANT);
+    rc = test_mayo(0);
 #endif
 
     if (rc != MAYO_OK) {
@@ -123,3 +123,4 @@ int main(int argc, char *argv[]) {
     }
     return rc;
 }
+
