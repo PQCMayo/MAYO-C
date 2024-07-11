@@ -29,13 +29,13 @@ int main(int argc, char *argv[]) {
         goto end;
     }
     int runs = atoi(argv[2]);
-    if (!strcmp(argv[1], "MAYO_1")) {
+    if (!strcmp(argv[1], "MAYO-1")) {
         rc = bench_sig(&MAYO_1, runs, 0);
-    } else if (!strcmp(argv[1], "MAYO_2")) {
+    } else if (!strcmp(argv[1], "MAYO-2")) {
         rc = bench_sig(&MAYO_2, runs, 0);
-    } else if (!strcmp(argv[1], "MAYO_3")) {
+    } else if (!strcmp(argv[1], "MAYO-3")) {
         rc = bench_sig(&MAYO_3, runs, 0);
-    } else if (!strcmp(argv[1], "MAYO_5")) {
+    } else if (!strcmp(argv[1], "MAYO-5")) {
         rc = bench_sig(&MAYO_5, runs, 0);
     }
 #else

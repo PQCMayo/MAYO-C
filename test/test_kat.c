@@ -37,13 +37,13 @@ int main(int argc, char *argv[]) {
         goto end;
     }
 
-    if (!strcmp(argv[1], "MAYO_1")) {
+    if (!strcmp(argv[1], "MAYO-1")) {
         rc = test_sig_kat(&MAYO_1);
-    } else if (!strcmp(argv[1], "MAYO_2")) {
+    } else if (!strcmp(argv[1], "MAYO-2")) {
         rc = test_sig_kat(&MAYO_2);
-    } else if (!strcmp(argv[1], "MAYO_3")) {
+    } else if (!strcmp(argv[1], "MAYO-3")) {
         rc = test_sig_kat(&MAYO_3);
-    } else if (!strcmp(argv[1], "MAYO_5")) {
+    } else if (!strcmp(argv[1], "MAYO-5")) {
         rc = test_sig_kat(&MAYO_5);
     } else {
         return -1;

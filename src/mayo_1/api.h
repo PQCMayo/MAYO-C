@@ -9,7 +9,7 @@
 #define CRYPTO_PUBLICKEYBYTES 1168
 #define CRYPTO_BYTES 321
 
-#define CRYPTO_ALGNAME "MAYO_1"
+#define CRYPTO_ALGNAME "MAYO-1"
 
 #define crypto_sign_keypair MAYO_NAMESPACE(crypto_sign_keypair)
 int
