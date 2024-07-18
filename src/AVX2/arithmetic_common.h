@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 #include <immintrin.h>
+#include <mem.h>
 
 #define K_OVER_2 ((K_MAX+1)/2)
 
@@ -144,31 +145,6 @@ inline void mayo_S2_multabs_avx2(const unsigned char *S2, __m256i *S2_multabs) {
         S2_multabs[K_OVER_2*c +  r/2] = _mm256_load_si256((__m256i *)(mayo_gf16_mul + 32*S2[O_MAX*r + c])) ;
 #endif
     }
-}
-
-static inline uint64_t gf16v_mul_u64( uint64_t a, uint8_t b ) {
-    uint64_t mask_msb = 0x8888888888888888ULL;
-    uint64_t a_msb;
-    uint64_t a64 = a;
-    uint64_t b32 = b;
-    uint64_t r64 = a64 * (b32 & 1);
-
-    a_msb = a64 & mask_msb; // MSB, 3rd bits
-    a64 ^= a_msb;   // clear MSB
-    a64 = (a64 << 1) ^ ((a_msb >> 3) * 3);
-    r64 ^= (a64) * ((b32 >> 1) & 1);
-
-    a_msb = a64 & mask_msb; // MSB, 3rd bits
-    a64 ^= a_msb;   // clear MSB
-    a64 = (a64 << 1) ^ ((a_msb >> 3) * 3);
-    r64 ^= (a64) * ((b32 >> 2) & 1);
-
-    a_msb = a64 & mask_msb; // MSB, 3rd bits
-    a64 ^= a_msb;   // clear MSB
-    a64 = (a64 << 1) ^ ((a_msb >> 3) * 3);
-    r64 ^= (a64) * ((b32 >> 3) & 1);
-
-    return r64;
 }
 
 #endif

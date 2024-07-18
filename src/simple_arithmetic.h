@@ -2,11 +2,17 @@
 
 #ifndef SIMPLE_ARITHMETIC_H
 #define SIMPLE_ARITHMETIC_H
+#include <mem.h>
 
 // GF(16) multiplication mod x^4 + x + 1
 static inline unsigned char mul_f(unsigned char a, unsigned char b) {
     // carryless multiply
     unsigned char p;
+
+#if !(((defined(__clang__) && __clang_major__ < 15) || (!defined(__clang__) && defined(__GNUC__) && __GNUC__ <= 12)) && (defined(__x86_64__) || defined(_M_X64)))
+    a ^= unsigned_char_blocker;
+#endif
+
     p  = (a & 1)*b;
     p ^= (a & 2)*b;
     p ^= (a & 4)*b;
@@ -103,33 +109,37 @@ inline void m_vec_add(int m_legs, const uint64_t *in,
     }
 }
 
+static inline uint64_t gf16v_mul_u64( uint64_t a, uint8_t b ) {
+    uint64_t mask_msb = 0x8888888888888888ULL;
+    uint64_t a_msb;
+    uint64_t a64 = a;
+#if !(((defined(__clang__) && __clang_major__ < 15) || (!defined(__clang__) && defined(__GNUC__) && __GNUC__ <= 12)) && (defined(__x86_64__) || defined(_M_X64)))
+    uint64_t b32 = b ^ unsigned_char_blocker;
+#else
+    uint64_t b32 = b;
+#endif
+    uint64_t r64 = a64 * (b32 & 1);
+
+    a_msb = a64 & mask_msb; // MSB, 3rd bits
+    a64 ^= a_msb;   // clear MSB
+    a64 = (a64 << 1) ^ ((a_msb >> 3) * 3);
+    r64 ^= (a64) * ((b32 >> 1) & 1);
+
+    a_msb = a64 & mask_msb; // MSB, 3rd bits
+    a64 ^= a_msb;   // clear MSB
+    a64 = (a64 << 1) ^ ((a_msb >> 3) * 3);
+    r64 ^= (a64) * ((b32 >> 2) & 1);
+
+    a_msb = a64 & mask_msb; // MSB, 3rd bits
+    a64 ^= a_msb;   // clear MSB
+    a64 = (a64 << 1) ^ ((a_msb >> 3) * 3);
+    r64 ^= (a64) * ((b32 >> 3) & 1);
+
+    return r64;
+}
+
 // This implements arithmetic for nibble-packed vectors of m field elements in Z_2[x]/(x^4+x+1)
 // gf16 := gf2[x]/(x^4+x+1)
-
-static inline uint32_t gf16v_mul_u32(uint32_t a, uint8_t b) {
-    uint32_t a_msb;
-    uint32_t a32 = a;
-    uint32_t b32 = b;
-    uint32_t r32 = a32 * (b32 & 1);
-
-    a_msb = a32 & 0x88888888; // MSB, 3rd bits
-    a32 ^= a_msb;   // clear MSB
-    a32 = (a32 << 1) ^ ((a_msb >> 3) * 3);
-    r32 ^= (a32) * ((b32 >> 1) & 1);
-
-    a_msb = a32 & 0x88888888; // MSB, 3rd bits
-    a32 ^= a_msb;   // clear MSB
-    a32 = (a32 << 1) ^ ((a_msb >> 3) * 3);
-    r32 ^= (a32) * ((b32 >> 2) & 1);
-
-    a_msb = a32 & 0x88888888; // MSB, 3rd bits
-    a32 ^= a_msb;   // clear MSB
-    a32 = (a32 << 1) ^ ((a_msb >> 3) * 3);
-    r32 ^= (a32) * ((b32 >> 3) & 1);
-
-    return r32;
-
-}
  
 static inline void m_vec_mul_add(int m_legs, const uint64_t *in, unsigned char a, uint64_t *acc) {
     for(int i=0; i < m_legs*2;i++){

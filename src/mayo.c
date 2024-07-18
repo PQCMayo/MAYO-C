@@ -270,10 +270,8 @@ int mayo_sign_signature(const mayo_params_t *p, unsigned char *sig,
     unsigned char O[(N_MINUS_O_MAX)*O_MAX]; // secret data
     alignas(32) sk_t sk;                    // secret data
     unsigned char Ox[N_MINUS_O_MAX];        // secret data
-    // unsigned char Mdigest[DIGEST_BYTES];
     unsigned char tmp[DIGEST_BYTES_MAX + SALT_BYTES_MAX + SK_SEED_BYTES_MAX + 1];
     unsigned char *ctrbyte;
-    unsigned char *vi;
 
     const int param_m = PARAM_m(p);
     const int param_n = PARAM_n(p);
@@ -374,14 +372,8 @@ int mayo_sign_signature(const mayo_params_t *p, unsigned char *sig,
         }
     }
 
-    // s is already 0
-    // TODO: optimize this?
-    for (int i = 0; i <= param_k - 1; ++i) {
-        vi = Vdec + i * (param_n - param_o);
-        mat_mul(O, x + i * param_o, Ox, param_o, param_n - param_o, 1);
-        mat_add(vi, Ox, s + i * param_n, param_n - param_o, 1);
-        memcpy(s + i * param_n + (param_n - param_o), x + i * param_o, param_o);
-    }
+    finish_signature(p, O, x, Vdec, s);
+
     encode(s, sig, param_n * param_k);
     memcpy(sig + param_sig_bytes - param_salt_bytes, salt, param_salt_bytes);
     *siglen = param_sig_bytes;

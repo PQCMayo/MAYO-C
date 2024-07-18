@@ -58,5 +58,9 @@ int sample_solution(const mayo_params_t *p, unsigned char *A, const unsigned cha
 void m_calculate_PS_SPS(const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, const unsigned char *S,
                               const int m, const int v, const int o, const int k, uint64_t *SPS);
 
+// Convert solution x to signature s
+#define finish_signature MAYO_NAMESPACE(finish_signature)
+void finish_signature(const mayo_params_t* p, const unsigned char* O, const unsigned char* x, const unsigned char* Vdec, unsigned char* s);
+
 #endif
 

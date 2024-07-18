@@ -2,6 +2,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 void mayo_secure_free(void *mem, size_t size) {
     if (mem) {
@@ -17,3 +18,6 @@ void mayo_secure_clear(void *mem, size_t size) {
     memset_func(mem, 0, size);
 }
 
+volatile uint32_t uint32_t_blocker = 0;
+volatile uint64_t uint64_t_blocker = 0;
+volatile unsigned char unsigned_char_blocker = 0;

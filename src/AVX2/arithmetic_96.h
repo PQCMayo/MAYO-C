@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <mayo.h>
 #include <arithmetic_common.h>
+#include <simple_arithmetic.h>
 
 // This implements arithmetic for vectors of 96 field elements in Z_2[x]/(x^4+x+1)
 

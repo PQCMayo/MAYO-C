@@ -80,6 +80,7 @@ inline void mayo_12_Ot_times_P1O_P2_avx2(const uint64_t *_P1O_P2, __m256i *O_mul
     }
 }
 
+
 static
 inline void mayo_12_P1P1t_times_O(const uint64_t *_P1, const unsigned char *O, uint64_t *_acc){
 

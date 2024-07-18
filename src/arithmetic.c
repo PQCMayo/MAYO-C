@@ -6,6 +6,7 @@
 #include <mem.h>
 #include <echelon_form.h>
 #include <stdalign.h>
+#include <string.h>
 #ifdef ENABLE_CT_TESTING
 #include <valgrind/memcheck.h>
 #endif
@@ -325,3 +326,52 @@ int sample_solution(const mayo_params_t *p, unsigned char *A,
     return 1;
 }
 
+void finish_signature(const mayo_params_t* p, const unsigned char* O, const unsigned char* x, const unsigned char* Vdec, unsigned char* s){
+
+    const int param_n = PARAM_n(p);
+    const int param_o = PARAM_o(p);
+    const int param_k = PARAM_k(p);
+    const int legs = (param_n-param_o+31)/32;
+    uint64_t product[N_MAX/32*2*K_MAX] = {0};
+    uint64_t O_col[N_MAX/32*2];
+    
+    // matrix mul
+    for (int i = 0; i < param_o; i++)
+    {
+        // read column of O
+        memset((void *) O_col, 0, 2*legs*8);
+        for (int j = 0; j < param_n-param_o; j++)
+        {
+            O_col[(j/16)] ^= ( ((uint64_t) O[j*param_o + i ]) << (4*(j%16)));
+        }
+
+        // process column of O
+        for (int j = 0; j < param_k; j++)
+        {
+#ifdef MAYO_VARIANT
+#if N_MAX-O_MAX <= 64
+            vec_mul_add_64(O_col, x[j*param_o+i], product + j*2*legs);
+#elif N_MAX-O_MAX <= 96
+            vec_mul_add_96(O_col, x[j*param_o+i], product + j*2*legs);
+#elif N_MAX-O_MAX <= 128
+            vec_mul_add_128(O_col, x[j*param_o+i], product + j*2*legs);
+#else
+    not implemented
+#endif
+#else
+            m_vec_mul_add(legs, O_col, x[j*param_o+i], product + j*2*legs);
+#endif
+        }
+    }    
+    
+    // write product to s
+    for (int i = 0; i < param_k; i++)
+    {
+        for (int j = 0; j < param_n-param_o; j++)
+        {
+            s[param_n*i + j] = Vdec[i*(param_n-param_o) + j] ^ ((product[i*2*legs + (j/16)] >> (4*(j%16))) & 0xf);
+        }
+        memcpy(s + i*param_n + (param_n-param_o), x + i*param_o, param_o);
+    }
+
+}
