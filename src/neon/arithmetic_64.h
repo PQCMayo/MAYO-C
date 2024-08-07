@@ -24,31 +24,6 @@ inline void vec_add_64(const uint64_t *in, uint64_t *acc) {
     acc[3] ^= in[3];
 }
 
-static inline uint64_t gf16v_mul_u64( uint64_t a, uint8_t b ) {
-    uint64_t mask_msb = 0x8888888888888888ULL;
-    uint64_t a_msb;
-    uint64_t a64 = a;
-    uint64_t b32 = b;
-    uint64_t r64 = a64 * (b32 & 1);
-
-    a_msb = a64 & mask_msb; // MSB, 3rd bits
-    a64 ^= a_msb;   // clear MSB
-    a64 = (a64 << 1) ^ ((a_msb >> 3) * 3);
-    r64 ^= (a64) * ((b32 >> 1) & 1);
-
-    a_msb = a64 & mask_msb; // MSB, 3rd bits
-    a64 ^= a_msb;   // clear MSB
-    a64 = (a64 << 1) ^ ((a_msb >> 3) * 3);
-    r64 ^= (a64) * ((b32 >> 2) & 1);
-
-    a_msb = a64 & mask_msb; // MSB, 3rd bits
-    a64 ^= a_msb;   // clear MSB
-    a64 = (a64 << 1) ^ ((a_msb >> 3) * 3);
-    r64 ^= (a64) * ((b32 >> 3) & 1);
-
-    return r64;
-}
-
 static inline uint32_t mul_table(uint8_t b){
     uint32_t x = ((uint32_t) b) * 0x08040201;
 
