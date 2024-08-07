@@ -12,6 +12,41 @@
 
 #include <arm_neon.h>
 
+const unsigned char __0_f[16] __attribute__((aligned(16))) = {
+0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07, 0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f
+};
+
+const unsigned char __gf16_reduce[16] __attribute__((aligned(16))) = {
+0x00,0x13,0x26,0x35,0x4c,0x5f,0x6a,0x79, 0x8b,0x98,0xad,0xbe,0xc7,0xd4,0xe1,0xf2
+};
+
+static inline
+uint8x16_t _gf16v_mul_unpack_neon( uint8x16_t a0 , uint8x16_t b0 , uint8x16_t tab_reduce )
+{
+    uint8x16_t ab = vreinterpretq_u8_p8(vmulq_p8( a0 , b0 ));
+    return ab^vqtbl1q_u8( tab_reduce , vshrq_n_u8(ab,4) );
+}
+
+static inline
+uint8x16_t _gf16v_get_multab_neon( uint8x16_t b , uint8x16_t tab_reduce , uint8x16_t tab_0_f ) { return _gf16v_mul_unpack_neon(b,tab_0_f,tab_reduce); }
+
+static inline
+uint8x16_t gf16v_get_multab_neon( uint8_t b )
+{
+    uint8x16_t tab_reduce = vld1q_u8(__gf16_reduce);
+    uint8x16_t tab_0_f = vld1q_u8(__0_f);
+
+    uint8x16_t bb = vdupq_n_u8(b);
+    return _gf16v_get_multab_neon(bb,tab_reduce,tab_0_f);
+}
+
+static inline
+uint8x16_t _gf16_tbl_x2( uint8x16_t a , uint8x16_t tbl , uint8x16_t tblhi , uint8x16_t mask_f ) {
+    // return vsliq_n_u8( vqtbl1q_u8( tbl , a&mask_f ) , vqtbl1q_u8( tbl , vshrq_n_u8( a , 4 ) ), 4 );
+    return vqtbl1q_u8( tbl , a&mask_f ) ^ vqtbl1q_u8( tblhi , vshrq_n_u8( a , 4 ) );
+}
+
+
 #ifndef MAYO_VARIANT
 static void m_multiply_bins(const int m_legs, uint64_t *bins, uint64_t *out) {
 
@@ -429,86 +464,29 @@ static inline void mul_add_m_upper_triangular_mat_x_mat_trans(int m_legs, const 
 
 // multiplies the transpose of a single matrix with m matrices and adds result to acc
 static inline void mul_add_mat_trans_x_m_mat(int m_legs, const unsigned char *mat, const uint64_t *bs_mat, uint64_t *acc, int mat_rows, int mat_cols, int bs_mat_cols) {
-
     for (int r = 0; r < mat_cols; r++) {
         for (int c = 0; c < mat_rows; c++) {
-            for (int k = 0; k < bs_mat_cols; k += 1) {
-#if defined(MAYO_VARIANT) && (M_MAX == 64)
-                (void) m_legs;
-                vec_mul_add_64(bs_mat + 4 * (c * bs_mat_cols + k), mat[c * mat_cols + r], acc + 4 * (r * bs_mat_cols + k));
-#elif defined(MAYO_VARIANT) && (M_MAX == 96)
-                (void) m_legs;
-                vec_mul_add_96(bs_mat + 6 * (c * bs_mat_cols + k), mat[c * mat_cols + r], acc + 6 * (r * bs_mat_cols + k));
-#elif defined(MAYO_VARIANT) && (M_MAX == 128)
-                (void) m_legs;
-                vec_mul_add_128(bs_mat + 8 * (c * bs_mat_cols + k), mat[c * mat_cols + r], acc + 8 * (r * bs_mat_cols + k));
-#else
-                m_vec_mul_add(m_legs, bs_mat + m_legs * 2 * (c * bs_mat_cols + k), mat[c * mat_cols + r], acc + m_legs * 2 * (r * bs_mat_cols + k));
-#endif
+            uint8x16_t tbl = gf16v_get_multab_neon(mat[c * mat_cols + r]);
+            uint8x16_t tblhi = tbl << 4;
+
+            int cols = bs_mat_cols * (m_legs * 32)/2;
+            uint8_t *_acc = (uint8_t*)acc + r * cols;
+            uint8_t *_bs = (uint8_t*)bs_mat + c * cols;
+
+            for (int k = 0; k < cols; k += 16) {
+                uint8x16_t t = vld1q_u8(_acc + k);
+                uint8x16_t a = vld1q_u8(_bs + k);
+
+                uint8x16_t mask_f = vdupq_n_u8( 0xf );
+                t ^= _gf16_tbl_x2(a, tbl, tblhi, mask_f);
+
+                vst1q_u8((uint8_t*)(acc) + (r * cols + k), t);
             }
         }
     }
 }
 
 // multiplies a single matrix with m matrices and adds result to acc
-#if 0
-static inline void mul_add_mat_x_m_mat(int m_legs, const unsigned char *mat, const uint64_t *bs_mat, uint64_t *acc, int mat_rows, int mat_cols, int bs_mat_cols) {
-
-    for (int r = 0; r < mat_rows; r++) {
-        for (int c = 0; c < mat_cols; c++) {
-            for (int k = 0; k < bs_mat_cols; k += 1) {
-#if defined(MAYO_VARIANT) && (M_MAX == 64)
-                (void) m_legs;
-                vec_mul_add_64(bs_mat + 4 * (c * bs_mat_cols + k), mat[r * mat_cols + c], acc + 4 * (r * bs_mat_cols + k));
-#elif defined(MAYO_VARIANT) && (M_MAX == 96)
-                (void) m_legs;
-                vec_mul_add_96(bs_mat + 6 * (c * bs_mat_cols + k), mat[r * mat_cols + c], acc + 6 * (r * bs_mat_cols + k));
-#elif defined(MAYO_VARIANT) && (M_MAX == 128)
-                (void) m_legs;
-                vec_mul_add_128(bs_mat + 8 * (c * bs_mat_cols + k), mat[r * mat_cols + c], acc + 8 * (r * bs_mat_cols + k));
-#else
-                m_vec_mul_add(m_legs, bs_mat + m_legs * 2 * (c * bs_mat_cols + k), mat[r * mat_cols + c], acc + m_legs * 2 * (r * bs_mat_cols + k));
-#endif
-            }
-        }
-    }
-}
-#else
-
-const unsigned char __0_f[16] __attribute__((aligned(16))) = {
-0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07, 0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f
-};
-
-const unsigned char __gf16_reduce[16] __attribute__((aligned(16))) = {
-0x00,0x13,0x26,0x35,0x4c,0x5f,0x6a,0x79, 0x8b,0x98,0xad,0xbe,0xc7,0xd4,0xe1,0xf2
-};
-
-static inline
-uint8x16_t _gf16v_mul_unpack_neon( uint8x16_t a0 , uint8x16_t b0 , uint8x16_t tab_reduce )
-{
-    uint8x16_t ab = vreinterpretq_u8_p8(vmulq_p8( a0 , b0 ));
-    return ab^vqtbl1q_u8( tab_reduce , vshrq_n_u8(ab,4) );
-}
-
-static inline
-uint8x16_t _gf16v_get_multab_neon( uint8x16_t b , uint8x16_t tab_reduce , uint8x16_t tab_0_f ) { return _gf16v_mul_unpack_neon(b,tab_0_f,tab_reduce); }
-
-static inline
-uint8x16_t gf16v_get_multab_neon( uint8_t b )
-{
-    uint8x16_t tab_reduce = vld1q_u8(__gf16_reduce);
-    uint8x16_t tab_0_f = vld1q_u8(__0_f);
-
-    uint8x16_t bb = vdupq_n_u8(b);
-    return _gf16v_get_multab_neon(bb,tab_reduce,tab_0_f);
-}
-
-static inline
-uint8x16_t _gf16_tbl_x2( uint8x16_t a , uint8x16_t tbl , uint8x16_t tblhi , uint8x16_t mask_f ) {
-    // return vsliq_n_u8( vqtbl1q_u8( tbl , a&mask_f ) , vqtbl1q_u8( tbl , vshrq_n_u8( a , 4 ) ), 4 );
-    return vqtbl1q_u8( tbl , a&mask_f ) ^ vqtbl1q_u8( tblhi , vshrq_n_u8( a , 4 ) );
-}
-
 static inline void mul_add_mat_x_m_mat(int m_legs, const unsigned char *mat, const uint64_t *bs_mat, uint64_t *acc, int mat_rows, int mat_cols, int bs_mat_cols) {
     for (int r = 0; r < mat_rows; r++) {
         for (int c = 0; c < mat_cols; c++) {
@@ -531,7 +509,6 @@ static inline void mul_add_mat_x_m_mat(int m_legs, const unsigned char *mat, con
         }
     }
 }
-#endif
 
 #endif
 
