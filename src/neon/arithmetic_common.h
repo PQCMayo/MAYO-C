@@ -441,25 +441,27 @@ static inline void mul_add_m_upper_triangular_mat_x_mat(int m_legs, const uint64
 
 // multiplies m (possibly upper triangular) matrices with the transpose of a single matrix and adds result to acc
 static inline void mul_add_m_upper_triangular_mat_x_mat_trans(int m_legs, const uint64_t *bs_mat, const unsigned char *mat, uint64_t *acc, int bs_mat_rows, int bs_mat_cols, int mat_rows, int triangular) {
+    // assumes triangular == 1, i.e. bs_mat_cols == bs_mat_rows
+    for (int k = 0; k < mat_rows; k++) {
+        for (int c = 0; c < bs_mat_cols; c++) {
+            uint8x16_t tbl = gf16v_get_multab_neon(mat[k * bs_mat_cols + c]);
+            uint8x16_t tblhi = tbl << 4;
 
-    int bs_mat_entries_used = 0;
-    for (int r = 0; r < bs_mat_rows; r++) {
-        for (int c = triangular * r; c < bs_mat_cols; c++) {
-            for (int k = 0; k < mat_rows; k += 1) {
-#if defined(MAYO_VARIANT) && (M_MAX == 64)
-                (void) m_legs;
-                vec_mul_add_64(bs_mat + 4 * bs_mat_entries_used, mat[k * bs_mat_cols + c], acc + 4 * (r * mat_rows + k));
-#elif defined(MAYO_VARIANT) && (M_MAX == 96)
-                (void) m_legs;
-                vec_mul_add_96(bs_mat + 6 * bs_mat_entries_used, mat[k * bs_mat_cols + c], acc + 6 * (r * mat_rows + k));
-#elif defined(MAYO_VARIANT) && (M_MAX == 128)
-                (void) m_legs;
-                vec_mul_add_128(bs_mat + 8 * bs_mat_entries_used, mat[k * bs_mat_cols + c], acc + 8 * (r * mat_rows + k));
-#else
-                m_vec_mul_add(m_legs, bs_mat + m_legs * 2 * bs_mat_entries_used, mat[k * bs_mat_cols + c], acc + m_legs * 2 * (r * mat_rows + k));
-#endif
+            for (int r = 0; r <= c; r++) {
+                int pos = r*(bs_mat_cols*2-r+1)/2 + (c - r);
+
+                uint8_t *_acc = (uint8_t*)acc + (m_legs * 16) * (r * mat_rows + k);
+                uint8_t *_bs = (uint8_t*)bs_mat + (m_legs * 16) * pos;
+                for (int p = 0; p < m_legs * 16; p += 16) {
+                    uint8x16_t t = vld1q_u8(_acc + p);
+                    uint8x16_t a = vld1q_u8(_bs + p);
+
+                    uint8x16_t mask_f = vdupq_n_u8( 0xf );
+                    t ^= _gf16_tbl_x2(a, tbl, tblhi, mask_f);
+
+                    vst1q_u8(_acc + p, t);
+                }
             }
-            bs_mat_entries_used += 1;
         }
     }
 }
