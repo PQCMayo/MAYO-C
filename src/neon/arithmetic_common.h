@@ -12,11 +12,11 @@
 
 #include <arm_neon.h>
 
-const unsigned char __0_f[16] __attribute__((aligned(16))) = {
+static const unsigned char __0_f[16] __attribute__((aligned(16))) = {
 0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07, 0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f
 };
 
-const unsigned char __gf16_reduce[16] __attribute__((aligned(16))) = {
+static const unsigned char __gf16_reduce[16] __attribute__((aligned(16))) = {
 0x00,0x13,0x26,0x35,0x4c,0x5f,0x6a,0x79, 0x8b,0x98,0xad,0xbe,0xc7,0xd4,0xe1,0xf2
 };
 
@@ -513,6 +513,20 @@ static inline void mul_add_mat_x_m_mat(int m_legs, const unsigned char *mat, con
         }
     }
 }
+
+static
+inline void mayo_O_multabs_neon(const unsigned char *O, uint8x16_t *O_multabs){
+    // build multiplication tables
+    for (size_t r = 0; r < V_MAX; r++)
+    {
+        for (size_t c = 0; c < O_MAX; c+=2)
+        {
+            O_multabs[O_MAX/2*r + c/2] = gf16v_get_multab_neon(O[O_MAX*r + c]) ^ (gf16v_get_multab_neon(O[O_MAX*r + c + 1]) << 4);
+        }
+    }
+}
+
+
 
 #endif
 
