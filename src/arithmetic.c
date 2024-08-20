@@ -101,6 +101,13 @@ void V_times_L__V_times_P1_times_Vt(const mayo_params_t* p, const uint64_t* L, c
     mayo_5_Vt_times_L_avx2(L, V_multabs, M);
     mayo_5_P1_times_Vt_avx2(P1, V_multabs, Pv);
     mayo_5_Vt_times_Pv_avx2(Pv, V_multabs, Y);
+#elif MAYO_NEON && defined(MAYO_VARIANT) && M_MAX == 64
+    uint8x16_t V_multabs[(K_MAX+1)/2*V_MAX];
+    alignas (32) uint64_t Pv[N_MINUS_O_MAX * K_MAX * M_MAX / 16] = {0};
+    mayo_V_multabs_neon(V, V_multabs);
+    mayo_12_Vt_times_L_neon(L, V_multabs, M);
+    mayo_12_P1_times_Vt_neon(P1, V_multabs, Pv);
+    mayo_12_Vt_times_Pv_neon(Pv, V_multabs, Y);
 #else
     #ifdef MAYO_VARIANT
     (void) p;
@@ -111,14 +118,11 @@ void V_times_L__V_times_P1_times_Vt(const mayo_params_t* p, const uint64_t* L, c
     const int param_k = PARAM_k(p);
 
     alignas (32) uint64_t Pv[N_MINUS_O_MAX * K_MAX * M_MAX / 16] = {0};
-    // M = v*L: (K*V) * (V*O*M) -> K*O*M
     mul_add_mat_x_m_mat(param_m / 32, V, L, M,
         param_k, param_n - param_o, param_o);
 
-    // pv = P1 * V^T: (V*V*M) * (K*V)^T -> V*K*M
     mul_add_m_upper_triangular_mat_x_mat_trans(param_m / 32, P1, V, Pv, param_n - param_o, param_n - param_o, param_k, 1);
 
-    // V*pv: (K*V) * (V*K*M) -> K*K*M
     mul_add_mat_x_m_mat(param_m / 32, V, Pv,
         Y, param_k, param_n - param_o,
         param_k);

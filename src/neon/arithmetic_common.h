@@ -12,6 +12,8 @@
 
 #include <arm_neon.h>
 
+#define K_OVER_2 ((K_MAX+1)/2)
+
 static const unsigned char __0_f[16] __attribute__((aligned(16))) = {
 0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07, 0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f
 };
@@ -526,6 +528,21 @@ inline void mayo_O_multabs_neon(const unsigned char *O, uint8x16_t *O_multabs){
     }
 }
 
+static
+inline void mayo_V_multabs_neon(const unsigned char *V, uint8x16_t *V_multabs){
+    // build multiplication tables
+    size_t r;
+    for (size_t c = 0; c < V_MAX; c++)
+    {
+        for (r = 0; r+1 < K_MAX; r+= 2)
+        {
+            V_multabs[K_OVER_2*c +  r/2] = gf16v_get_multab_neon(V[V_MAX*r + c]) ^ (gf16v_get_multab_neon(V[V_MAX*(r+1) + c]) << 4);
+        }
+#if K_MAX % 2 == 1
+        V_multabs[K_OVER_2*c + r/2] = gf16v_get_multab_neon(V[V_MAX*r + c]);
+#endif
+    }
+}
 
 
 #endif
