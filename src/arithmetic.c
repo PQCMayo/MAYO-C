@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <arithmetic.h>
+#include <arm_neon.h>
 #include <simple_arithmetic.h>
 #include <arithmetic_common.h>
 #include <mem.h>
@@ -176,7 +177,7 @@ void Ot_times_P1O_P2(const mayo_params_t* p, const uint64_t* P1, const unsigned 
 void m_calculate_PS_SPS(const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, const unsigned char *S,
                               const int m, const int v, const int o, const int k, uint64_t *SPS) {
     (void) m;
-#if MAYO_AVX
+#if MAYO_AVX || MAYO_NEON
     const int n = o + v;
 
     /* Old approach which is constant time but doesn't have to be */
@@ -199,7 +200,7 @@ void m_calculate_PS_SPS(const uint64_t *P1, const uint64_t *P2, const uint64_t *
 
     alignas (32) uint64_t PS[N_MAX * K_MAX * M_MAX / 16] = { 0 };
 
-#if M_MAX == 64
+#if MAYO_AVX && M_MAX == 64
     __m256i S1_multabs[(K_MAX+1)/2*V_MAX];
     __m256i S2_multabs[(K_MAX+1)/2*O_MAX];
     mayo_S1_multabs_avx2(S1, S1_multabs);
@@ -211,7 +212,7 @@ void m_calculate_PS_SPS(const uint64_t *P1, const uint64_t *P2, const uint64_t *
     // S^T * PS = S1^t*PS1 + S2^t*PS2
     mayo_12_S1t_times_PS1_avx2(PS, S1_multabs, SPS);
     mayo_12_S2t_times_PS2_avx2(PS + V_MAX*K_MAX*M_MAX/16, S2_multabs, SPS);
-#elif M_MAX == 96
+#elif MAYO_AVX && M_MAX == 96
     __m256i S1_multabs[(K_MAX+1)/2*V_MAX];
     __m256i S2_multabs[(K_MAX+1)/2*O_MAX];
 
@@ -224,7 +225,7 @@ void m_calculate_PS_SPS(const uint64_t *P1, const uint64_t *P2, const uint64_t *
     // S^T * PS = S1^t*PS1 + S2^t*PS2
     mayo_3_S1t_times_PS1_avx2(PS, S1_multabs, SPS);
     mayo_3_S2t_times_PS2_avx2(PS + V_MAX*K_MAX*M_MAX/16, S2_multabs, SPS);
-#elif M_MAX == 128
+#elif MAYO_AVX && M_MAX == 128
     __m256i S1_multabs[(K_MAX+1)/2*V_MAX];
     __m256i S2_multabs[(K_MAX+1)/2*O_MAX];
     mayo_S1_multabs_avx2(S1, S1_multabs);
@@ -236,6 +237,18 @@ void m_calculate_PS_SPS(const uint64_t *P1, const uint64_t *P2, const uint64_t *
     //m_calculate_SPS(PS, S, M_MAX, K_MAX, N_MAX, SPS);
     mayo_5_S1t_times_PS1_avx2(PS, S1_multabs, SPS);
     mayo_5_S2t_times_PS2_avx2(PS + V_MAX*K_MAX*M_MAX/16, S2_multabs, SPS);
+#elif MAYO_NEON && M_MAX == 64
+    uint8x16_t S1_multabs[(K_MAX+1)/2*V_MAX];
+    uint8x16_t S2_multabs[(K_MAX+1)/2*O_MAX];
+    mayo_S1_multabs_neon(S1, S1_multabs);
+    mayo_S2_multabs_neon(S2, S2_multabs);
+
+    mayo_12_P1_times_S1_plus_P2_times_S2_neon(P1, P2, S1_multabs, S2_multabs, PS);
+    mayo_12_P3_times_S2_neon(P3, S2_multabs, PS + V_MAX*K_MAX*M_MAX/16); // upper triangular
+
+    // S^T * PS = S1^t*PS1 + S2^t*PS2
+    mayo_12_S1t_times_PS1_neon(PS, S1_multabs, SPS);
+    mayo_12_S2t_times_PS2_neon(PS + V_MAX*K_MAX*M_MAX/16, S2_multabs, SPS);
 #else
     NOT IMPLEMENTED
 #endif
