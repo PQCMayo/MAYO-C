@@ -95,6 +95,82 @@ inline void mayo_12_Ot_times_P1O_P2_neon(const uint64_t *_P1O_P2, uint8x16_t *O_
     }
 }
 
+static
+inline void mayo_12_P1P1t_times_O_neon(const uint64_t *_P1, const unsigned char *O, uint64_t *_acc){
+
+    const uint8x16_t *P1 = (uint8x16_t *) _P1;
+    uint8x16_t *acc = (uint8x16_t *) _acc;
+    const uint8x16_t low_nibble_mask  = vdupq_n_u8( 0xf );
+
+    uint8x16_t O_multabs[O_MAX/2*V_MAX];
+    mayo_O_multabs_neon(O, O_multabs);
+
+    size_t cols_used = 0;
+    for (size_t r = 0; r < V_MAX; r++)
+    {
+        // do multiplications for one row and accumulate results in temporary format
+        uint8x16_t temp[2*O_MAX] = {0};
+        cols_used += 1;
+        size_t pos = r;
+        for (size_t c = 0; c < r; c++)
+        {
+            uint8x16_t in_odd0 = P1[2*pos];
+            uint8x16_t in_even0 = (in_odd0 >> 4) & low_nibble_mask;
+            in_odd0 &= low_nibble_mask;
+            uint8x16_t in_odd1 = P1[2*pos + 1];
+            uint8x16_t in_even1 = (in_odd1 >> 4) & low_nibble_mask;
+            in_odd1 &= low_nibble_mask;
+            pos += (V_MAX -c - 1);
+
+            for (size_t k = 0; k < O_MAX; k+=2)
+            {
+                temp[2*k]     ^= vqtbl1q_u8(O_multabs[O_MAX/2*c + k/2], in_odd0);
+                temp[2*k + 1] ^= vqtbl1q_u8(O_multabs[O_MAX/2*c + k/2], in_even0);
+                temp[2*k + 2] ^= vqtbl1q_u8(O_multabs[O_MAX/2*c + k/2], in_odd1);
+                temp[2*k + 3] ^= vqtbl1q_u8(O_multabs[O_MAX/2*c + k/2], in_even1);
+            }
+        }
+
+        for (size_t c = r+1; c < V_MAX; c++)
+        {
+            uint8x16_t in_odd0 = P1[2*cols_used];
+            uint8x16_t in_even0 = (in_odd0 >> 4) & low_nibble_mask;
+            in_odd0 &= low_nibble_mask;
+            uint8x16_t in_odd1 = P1[2*cols_used + 1];
+            uint8x16_t in_even1 = (in_odd1 >> 4) & low_nibble_mask;
+            in_odd1 &= low_nibble_mask;
+            cols_used ++;
+
+            for (size_t k = 0; k < O_MAX; k+=2)
+            {
+                temp[2*k]     ^= vqtbl1q_u8(O_multabs[O_MAX/2*c + k/2], in_odd0);
+                temp[2*k + 1] ^= vqtbl1q_u8(O_multabs[O_MAX/2*c + k/2], in_even0);
+                temp[2*k + 2] ^= vqtbl1q_u8(O_multabs[O_MAX/2*c + k/2], in_odd1);
+                temp[2*k + 3] ^= vqtbl1q_u8(O_multabs[O_MAX/2*c + k/2], in_even1);
+            }
+        }
+
+        for (size_t k = 0; k < O_MAX; k+=2)
+        {
+            uint8x16_t acc0 = acc[2*(r*O_MAX) + 2*k    ];
+            uint8x16_t acc1 = acc[2*(r*O_MAX) + 2*k + 1];
+            uint8x16_t acc2 = acc[2*(r*O_MAX) + 2*k + 2];
+            uint8x16_t acc3 = acc[2*(r*O_MAX) + 2*k + 3];
+
+
+            uint8x16_t t0 = (temp[2*k + 1] ^ (temp[2*k] >> 4)) & low_nibble_mask;
+            acc[2*(r*O_MAX) + 2*k] =     acc0 ^ temp[2*k] ^ (t0 << 4);
+            acc[2*(r*O_MAX) + 2*k + 2] = acc2 ^ temp[2*k+1] ^ t0;
+
+            uint8x16_t t1 = (temp[2*k + 3] ^ (temp[2*k + 2] >> 4)) & low_nibble_mask;
+
+            acc[2*(r*O_MAX) + 2*k + 1] = acc1 ^ temp[2*k+2] ^ (t1 << 4);
+            acc[2*(r*O_MAX) + 2*k + 3] = acc3 ^ temp[2*k+3] ^ t1;
+        }
+    }
+}
+
+
 
 static
 inline void mayo_12_Vt_times_L_neon(const uint64_t *_L, const uint8x16_t *V_multabs, uint64_t *_acc){
@@ -251,5 +327,6 @@ inline void mayo_12_Vt_times_Pv_neon(const uint64_t *_Pv, const uint8x16_t *V_mu
     }
 }
 
+#undef K_OVER_2
 #endif
 

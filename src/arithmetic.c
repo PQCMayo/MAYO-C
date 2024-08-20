@@ -38,6 +38,9 @@ void P1P1t_times_O(const mayo_params_t* p, const uint64_t* P1, const unsigned ch
 #elif MAYO_AVX && defined(MAYO_VARIANT) && M_MAX == 128
     (void) p;
     mayo_5_P1P1t_times_O(P1, O, acc);
+#elif MAYO_NEON && defined(MAYO_VARIANT) && M_MAX == 64
+    (void) p;
+    mayo_12_P1P1t_times_O_neon(P1, O, acc);
 #else
     #ifndef MAYO_VARIANT
     const int m_legs = PARAM_m(p) / 32;
