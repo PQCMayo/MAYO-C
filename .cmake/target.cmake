@@ -47,6 +47,7 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
       -mcpu=apple-m1)
   endif()
   option(ENABLE_AESNI "Use AESni" OFF)
+  option(ENABLE_AESNEON "Use AES-NEON" ON)
 endif()
 
 
