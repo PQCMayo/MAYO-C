@@ -42,6 +42,9 @@ void P1P1t_times_O(const mayo_params_t* p, const uint64_t* P1, const unsigned ch
 #elif MAYO_NEON && defined(MAYO_VARIANT) && M_MAX == 64
     (void) p;
     mayo_12_P1P1t_times_O_neon(P1, O, acc);
+#elif MAYO_NEON && defined(MAYO_VARIANT) && M_MAX == 96
+    (void) p;
+    mayo_3_P1P1t_times_O_neon(P1, O, acc);
 #else
     #ifndef MAYO_VARIANT
     const int m_legs = PARAM_m(p) / 32;
@@ -112,6 +115,13 @@ void V_times_L__V_times_P1_times_Vt(const mayo_params_t* p, const uint64_t* L, c
     mayo_12_Vt_times_L_neon(L, V_multabs, M);
     mayo_12_P1_times_Vt_neon(P1, V_multabs, Pv);
     mayo_12_Vt_times_Pv_neon(Pv, V_multabs, Y);
+#elif MAYO_NEON && defined(MAYO_VARIANT) && M_MAX == 96
+    uint8x16_t V_multabs[(K_MAX+1)/2*V_MAX];
+    alignas (32) uint64_t Pv[N_MINUS_O_MAX * K_MAX * M_MAX / 16] = {0};
+    mayo_V_multabs_neon(V, V_multabs);
+    mayo_3_Vt_times_L_neon(L, V_multabs, M);
+    mayo_3_P1_times_Vt_neon(P1, V_multabs, Pv);
+    mayo_3_Vt_times_Pv_neon(Pv, V_multabs, Y);
 #else
     #ifdef MAYO_VARIANT
     (void) p;
@@ -155,6 +165,11 @@ void Ot_times_P1O_P2(const mayo_params_t* p, const uint64_t* P1, const unsigned 
     mayo_O_multabs_neon(O, O_multabs);
     mayo_12_P1_times_O_neon(P1, O_multabs, P1O_P2);
     mayo_12_Ot_times_P1O_P2_neon(P1O_P2, O_multabs, P3);
+#elif MAYO_NEON && defined(MAYO_VARIANT) && M_MAX == 96
+    uint8x16_t O_multabs[O_MAX/2*V_MAX];
+    mayo_O_multabs_neon(O, O_multabs);
+    mayo_3_P1_times_O_neon(P1, O_multabs, P1O_P2);
+    mayo_3_Ot_times_P1O_P2_neon(P1O_P2, O_multabs, P3);
 #else
     #ifdef MAYO_VARIANT
     (void) p;
@@ -249,6 +264,18 @@ void m_calculate_PS_SPS(const uint64_t *P1, const uint64_t *P2, const uint64_t *
     // S^T * PS = S1^t*PS1 + S2^t*PS2
     mayo_12_S1t_times_PS1_neon(PS, S1_multabs, SPS);
     mayo_12_S2t_times_PS2_neon(PS + V_MAX*K_MAX*M_MAX/16, S2_multabs, SPS);
+#elif MAYO_NEON && M_MAX == 96
+    uint8x16_t S1_multabs[(K_MAX+1)/2*V_MAX];
+    uint8x16_t S2_multabs[(K_MAX+1)/2*O_MAX];
+    mayo_S1_multabs_neon(S1, S1_multabs);
+    mayo_S2_multabs_neon(S2, S2_multabs);
+
+    mayo_3_P1_times_S1_plus_P2_times_S2_neon(P1, P2, S1_multabs, S2_multabs, PS);
+    mayo_3_P3_times_S2_neon(P3, S2_multabs, PS + V_MAX*K_MAX*M_MAX/16); // upper triangular
+
+    // S^T * PS = S1^t*PS1 + S2^t*PS2
+    mayo_3_S1t_times_PS1_neon(PS, S1_multabs, SPS);
+    mayo_3_S2t_times_PS2_neon(PS + V_MAX*K_MAX*M_MAX/16, S2_multabs, SPS);
 #else
     NOT IMPLEMENTED
 #endif
