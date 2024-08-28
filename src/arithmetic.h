@@ -28,6 +28,9 @@
 #if defined(MAYO_NEON) && (M_MAX == 96)
     #include <shuffle_arithmetic_96.h>
 #endif
+#if defined(MAYO_NEON) && (M_MAX == 128)
+    #include <shuffle_arithmetic_128.h>
+#endif
 
 #if !defined(MAYO_VARIANT) || (defined(MAYO_VARIANT) && (M_MAX == 64))
     #include <arithmetic_64.h>
