@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
+if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm64")
     add_definitions(-DTARGET_ARM64)
 elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
     add_definitions(-DTARGET_ARM)

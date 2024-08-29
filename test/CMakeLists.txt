@@ -25,7 +25,7 @@ else()
         add_executable(mayo_test_kat_${MVARIANT} test_kat.c)
         target_link_libraries(mayo_test_kat_${MVARIANT} ${MVARIANT_LOWER}_test)
 
-        add_executable(mayo_bench_${MVARIANT} bench.c)
+        add_executable(mayo_bench_${MVARIANT} bench.c m1cycles.c)
         target_link_libraries(mayo_bench_${MVARIANT} ${MVARIANT_LOWER})
 
         add_executable(mayo_test_scheme_${MVARIANT} test_mayo.c)

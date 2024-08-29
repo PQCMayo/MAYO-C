@@ -6,11 +6,12 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+#include "m1cycles.h"
 
 #if defined(TARGET_OS_UNIX) && (defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_OTHER))
 #include <time.h>
 #endif
-#if (defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_S390X) || defined(TARGET_OTHER))
+#if (defined(TARGET_ARM) || defined(TARGET_S390X) || defined(TARGET_OTHER))
 #define print_unit printf("nsec\n");
 #else
 #define print_unit printf("cycles\n");
@@ -21,6 +22,10 @@ static inline int64_t cpucycles(void);
 
 int main(int argc, char *argv[]) {
     int rc = 0;
+
+#ifdef TARGET_ARM64
+    setup_rdtsc();
+#endif
 
 #ifdef ENABLE_PARAMS_DYNAMIC
     if (argc < 3) {
@@ -54,7 +59,7 @@ end:
     return rc;
 }
 
-#if (defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_S390X))
+#if (defined(TARGET_ARM) || defined(TARGET_S390X))
 #define BENCH_UNITS "nsec"
 #else
 #define BENCH_UNITS "cycles"
@@ -154,6 +159,8 @@ static inline int64_t cpucycles(void) {
     uint64_t tod;
     asm volatile("stckf %0\n" : "=Q" (tod) : : "cc");
     return (tod * 1000 / 4096);
+#elif (defined(TARGET_ARM64))
+    return rdtsc();
 #else
     struct timespec time;
     clock_gettime(CLOCK_REALTIME, &time);
