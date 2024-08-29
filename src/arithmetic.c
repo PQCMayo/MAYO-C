@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <arithmetic.h>
-#include <arm_neon.h>
 #include <simple_arithmetic.h>
 #include <arithmetic_common.h>
 #include <mem.h>
