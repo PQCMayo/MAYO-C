@@ -36,6 +36,7 @@ The following build options have been used to report performance numbers in the 
 2. Optimized (AES-NI enabled): `cmake -DMAYO_BUILD_TYPE=opt -DENABLE_AESNI=ON ..`
 3. Optimized (AES-NI disabled): `cmake -DMAYO_BUILD_TYPE=opt -DENABLE_AESNI=OFF ..`
 4. AVX2: `cmake -DMAYO_BUILD_TYPE=avx2 -DENABLE_AESNI=ON ..`
+5. A64 NEON: `cmake -DMAYO_BUILD_TYPE=neon ..`
 
 ## Build options
 
@@ -64,6 +65,7 @@ Specifies the build type for which Mayo is built. The options are `ref`, `opt` a
 - `ref` builds MAYO implemented with portable C code for native target architecture, using run-time parameters.
 - `opt` builds MAYO implemented with optimized portable C code, compiled with `-march=native` (if available) and AES acceleration (if available)
 - `avx2` builds MAYO implemented with optimized AVX2 code, compiled with `-march=native` (if available) and AES acceleration (if available)
+- `neon` builds MAYO implemented with optimized NEON code, compiled with `-march=native` (if available) and AES acceleration
 
 The default build type if none is specified is `opt`.
 
@@ -89,10 +91,10 @@ The following artifacts are built:
 - `libmayo_<level>_nistapi.a`: library for `MAYO_<level>` against the NIST API.
 - `libmayo_<level>_nistapi_test.a`: library for `MAYO_<level>` against the NIST API. Only for test, using the deterministic CTR-DRBG as backend.
 - `mayo_bench_<param>`: Benchmarking suites.
-- `mayo_test_kat_<param>` (`opt` and `avx2`), `mayo_test_kat` (`ref`): KAT test suites.
-- `mayo_test_scheme_<param>` (`opt` and `avx2`), `mayo_test_scheme` (`ref`): Self-test suites.
+- `mayo_test_kat_<param>` (`opt`, `avx2` and `neon`), `mayo_test_kat` (`ref`): KAT test suites.
+- `mayo_test_scheme_<param>` (`opt`, `avx2` and `neon`), `mayo_test_scheme` (`ref`): Self-test suites.
 - `PQCgenKAT_sign_<param>`: App for generating NIST KAT.
-- `example_<param>` (`opt` and `avx2`), `example_mayo` (`ref`): Example app using the MAYO API.
+- `example_<param>` (`opt`, `avx2` and `neon`), `example_mayo` (`ref`): Example app using the MAYO API.
 - `example_nistapi_<param>`: Example app using the NIST API.
 
 ## Test
@@ -121,7 +123,7 @@ KAT verification is done as part of the test harness (see previous section).
 
 A benchmarking suite is built and runs with the following command, where `params` specifies the MAYO parameter set and `runs` the number of benchmark runs:
 
-If `MAYO_BUILD_TYPE` is `opt` or `avx2`:
+If `MAYO_BUILD_TYPE` is `opt`, `avx2` or `neon`:
 - `test/mayo_bench_<param> <runs>`,
 
 If `MAYO_BUILD_TYPE` is `ref`:
