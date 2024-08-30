@@ -24,19 +24,19 @@ inline void mayo_5_P1_times_O_neon(const uint64_t *_P1, uint8x16_t *O_multabs, u
         for (size_t c = r; c < V_MAX; c++)
         {
             uint8x16_t in_odd0 = P1[cols_used];
-            uint8x16_t in_even0 = (in_odd0 >> 4) & low_nibble_mask;
+            uint8x16_t in_even0 = in_odd0 >> 4;
             in_odd0 &= low_nibble_mask;
             cols_used ++;
             uint8x16_t in_odd1 = P1[cols_used];
-            uint8x16_t in_even1 = (in_odd1 >> 4) & low_nibble_mask;
+            uint8x16_t in_even1 = in_odd1 >> 4;
             in_odd1 &= low_nibble_mask;
             cols_used ++;
             uint8x16_t in_odd2 = P1[cols_used];
-            uint8x16_t in_even2 = (in_odd2 >> 4) & low_nibble_mask;
+            uint8x16_t in_even2 = in_odd2 >> 4;
             in_odd2 &= low_nibble_mask;
             cols_used ++;
             uint8x16_t in_odd3 = P1[cols_used];
-            uint8x16_t in_even3 = (in_odd3 >> 4) & low_nibble_mask;
+            uint8x16_t in_even3 = in_odd3 >> 4;
             in_odd3 &= low_nibble_mask;
             cols_used ++;
 
@@ -56,18 +56,14 @@ inline void mayo_5_P1_times_O_neon(const uint64_t *_P1, uint8x16_t *O_multabs, u
         // convert to normal format and add to accumulator
         for (size_t k = 0; k < O_MAX; k+=2)
         {
-            uint8x16_t t0 = (temp[4*k + 1] ^ (temp[4*k] >> 4)) & low_nibble_mask;
-            uint8x16_t t1 = (temp[4*k + 3] ^ (temp[4*k + 2] >> 4)) & low_nibble_mask;
-            uint8x16_t t2 = (temp[4*k + 5] ^ (temp[4*k + 4] >> 4)) & low_nibble_mask;
-            uint8x16_t t3 = (temp[4*k + 7] ^ (temp[4*k + 6] >> 4)) & low_nibble_mask;
-            acc[(4*r*O_MAX) + 4*k]     ^= temp[4*k]     ^ (t0 << 4);
-            acc[(4*r*O_MAX) + 4*k + 1] ^= temp[4*k + 2] ^ (t1 << 4);
-            acc[(4*r*O_MAX) + 4*k + 2] ^= temp[4*k + 4] ^ (t2 << 4);
-            acc[(4*r*O_MAX) + 4*k + 3] ^= temp[4*k + 6] ^ (t3 << 4);
-            acc[(4*r*O_MAX) + 4*k + 4] ^= temp[4*k + 1] ^ t0;
-            acc[(4*r*O_MAX) + 4*k + 5] ^= temp[4*k + 3] ^ t1;
-            acc[(4*r*O_MAX) + 4*k + 6] ^= temp[4*k + 5] ^ t2;
-            acc[(4*r*O_MAX) + 4*k + 7] ^= temp[4*k + 7] ^ t3;
+            acc[(4*r*O_MAX) + 4*k]     ^= vsliq_n_u8(temp[4*k], temp[4*k+1], 4);
+            acc[(4*r*O_MAX) + 4*k + 4] ^= vsriq_n_u8(temp[4*k+1], temp[4*k], 4);
+            acc[(4*r*O_MAX) + 4*k + 1] ^= vsliq_n_u8(temp[4*k+2], temp[4*k+3], 4);
+            acc[(4*r*O_MAX) + 4*k + 5] ^= vsriq_n_u8(temp[4*k+3], temp[4*k+2], 4);
+            acc[(4*r*O_MAX) + 4*k + 2] ^= vsliq_n_u8(temp[4*k+4], temp[4*k+5], 4);
+            acc[(4*r*O_MAX) + 4*k + 6] ^= vsriq_n_u8(temp[4*k+5], temp[4*k+4], 4);
+            acc[(4*r*O_MAX) + 4*k + 3] ^= vsliq_n_u8(temp[4*k+6], temp[4*k+7], 4);
+            acc[(4*r*O_MAX) + 4*k + 7] ^= vsriq_n_u8(temp[4*k+7], temp[4*k+6], 4);
         }
     }
 }
@@ -85,16 +81,16 @@ inline void mayo_5_Ot_times_P1O_P2_neon(const uint64_t *_P1O_P2, uint8x16_t *O_m
         for (size_t r = 0; r < V_MAX; r++)
         {
             uint8x16_t in_odd0 = P1O_P2[4*r*O_MAX + 4*c];
-            uint8x16_t in_even0 = (in_odd0 >> 4) & low_nibble_mask;
+            uint8x16_t in_even0 = in_odd0 >> 4;
             in_odd0 &= low_nibble_mask;
             uint8x16_t in_odd1 = P1O_P2[4*r*O_MAX + 4*c + 1];
-            uint8x16_t in_even1 = (in_odd1 >> 4) & low_nibble_mask;
+            uint8x16_t in_even1 = in_odd1 >> 4;
             in_odd1 &= low_nibble_mask;
             uint8x16_t in_odd2 = P1O_P2[4*r*O_MAX + 4*c + 2];
-            uint8x16_t in_even2 = (in_odd2 >> 4) & low_nibble_mask;
+            uint8x16_t in_even2 = in_odd2 >> 4;
             in_odd2 &= low_nibble_mask;
             uint8x16_t in_odd3 = P1O_P2[4*r*O_MAX + 4*c + 3];
-            uint8x16_t in_even3 = (in_odd3 >> 4) & low_nibble_mask;
+            uint8x16_t in_even3 = in_odd3 >> 4;
             in_odd3 &= low_nibble_mask;
 
             for (size_t k = 0; k < O_MAX; k+=2)
@@ -113,18 +109,14 @@ inline void mayo_5_Ot_times_P1O_P2_neon(const uint64_t *_P1O_P2, uint8x16_t *O_m
         // convert to normal format and add to accumulator
         for (size_t k = 0; k < O_MAX; k+=2)
         {
-            uint8x16_t t0 = (temp[4*k + 1] ^ (temp[4*k] >> 4)) & low_nibble_mask;
-            uint8x16_t t1 = (temp[4*k + 3] ^ (temp[4*k + 2] >> 4)) & low_nibble_mask;
-            uint8x16_t t2 = (temp[4*k + 5] ^ (temp[4*k + 4] >> 4)) & low_nibble_mask;
-            uint8x16_t t3 = (temp[4*k + 7] ^ (temp[4*k + 6] >> 4)) & low_nibble_mask;
-            acc[4*(k*O_MAX) + 4*c]      ^= temp[4*k + 0] ^ (t0 << 4);
-            acc[4*(k*O_MAX) + 4*c + 1]  ^= temp[4*k + 2] ^ (t1 << 4);
-            acc[4*(k*O_MAX) + 4*c + 2]  ^= temp[4*k + 4] ^ (t2 << 4);
-            acc[4*(k*O_MAX) + 4*c + 3]  ^= temp[4*k + 6] ^ (t3 << 4);
-            acc[4*((k+1)*O_MAX) + 4*c]     ^= temp[4*k + 1] ^ t0;
-            acc[4*((k+1)*O_MAX) + 4*c + 1] ^= temp[4*k + 3] ^ t1;
-            acc[4*((k+1)*O_MAX) + 4*c + 2] ^= temp[4*k + 5] ^ t2;
-            acc[4*((k+1)*O_MAX) + 4*c + 3] ^= temp[4*k + 7] ^ t3;
+            acc[4*(k*O_MAX) + 4*c]         ^= vsliq_n_u8(temp[4*k], temp[4*k+1], 4);
+            acc[4*((k+1)*O_MAX) + 4*c]     ^= vsriq_n_u8(temp[4*k+1], temp[4*k], 4);
+            acc[4*(k*O_MAX) + 4*c + 1]     ^= vsliq_n_u8(temp[4*k+2], temp[4*k+3], 4);
+            acc[4*((k+1)*O_MAX) + 4*c + 1] ^= vsriq_n_u8(temp[4*k+3], temp[4*k+2], 4);
+            acc[4*(k*O_MAX) + 4*c + 2]     ^= vsliq_n_u8(temp[4*k+4], temp[4*k+5], 4);
+            acc[4*((k+1)*O_MAX) + 4*c + 2] ^= vsriq_n_u8(temp[4*k+5], temp[4*k+4], 4);
+            acc[4*(k*O_MAX) + 4*c + 3]     ^= vsliq_n_u8(temp[4*k+6], temp[4*k+7], 4);
+            acc[4*((k+1)*O_MAX) + 4*c + 3] ^= vsriq_n_u8(temp[4*k+7], temp[4*k+6], 4);
         }
     }
 }
@@ -149,16 +141,16 @@ inline void mayo_5_P1P1t_times_O_neon(const uint64_t *_P1, const unsigned char *
         for (size_t c = 0; c < r; c++)
         {
             uint8x16_t in_odd0 = P1[4*pos];
-            uint8x16_t in_even0 = (in_odd0 >> 4) & low_nibble_mask;
+            uint8x16_t in_even0 = in_odd0 >> 4;
             in_odd0 &= low_nibble_mask;
             uint8x16_t in_odd1 = P1[4*pos + 1];
-            uint8x16_t in_even1 = (in_odd1 >> 4) & low_nibble_mask;
+            uint8x16_t in_even1 = in_odd1 >> 4;
             in_odd1 &= low_nibble_mask;
             uint8x16_t in_odd2 = P1[4*pos + 2];
-            uint8x16_t in_even2 = (in_odd2 >> 4) & low_nibble_mask;
+            uint8x16_t in_even2 = in_odd2 >> 4;
             in_odd2 &= low_nibble_mask;
             uint8x16_t in_odd3 = P1[4*pos + 3];
-            uint8x16_t in_even3 = (in_odd3 >> 4) & low_nibble_mask;
+            uint8x16_t in_even3 = in_odd3 >> 4;
             in_odd3 &= low_nibble_mask;
             pos += (V_MAX -c - 1);
 
@@ -179,16 +171,16 @@ inline void mayo_5_P1P1t_times_O_neon(const uint64_t *_P1, const unsigned char *
         for (size_t c = r+1; c < V_MAX; c++)
         {
             uint8x16_t in_odd0 = P1[4*cols_used];
-            uint8x16_t in_even0 = (in_odd0 >> 4) & low_nibble_mask;
+            uint8x16_t in_even0 = in_odd0 >> 4;
             in_odd0 &= low_nibble_mask;
             uint8x16_t in_odd1 = P1[4*cols_used + 1];
-            uint8x16_t in_even1 = (in_odd1 >> 4) & low_nibble_mask;
+            uint8x16_t in_even1 = in_odd1 >> 4;
             in_odd1 &= low_nibble_mask;
             uint8x16_t in_odd2 = P1[4*cols_used + 2];
-            uint8x16_t in_even2 = (in_odd2 >> 4) & low_nibble_mask;
+            uint8x16_t in_even2 = in_odd2 >> 4;
             in_odd2 &= low_nibble_mask;
             uint8x16_t in_odd3 = P1[4*cols_used + 3];
-            uint8x16_t in_even3 = (in_odd3 >> 4) & low_nibble_mask;
+            uint8x16_t in_even3 = in_odd3 >> 4;
             in_odd3 &= low_nibble_mask;
             cols_used ++;
 
@@ -207,34 +199,14 @@ inline void mayo_5_P1P1t_times_O_neon(const uint64_t *_P1, const unsigned char *
 
         for (size_t k = 0; k < O_MAX; k+=2)
         {
-            uint8x16_t acc0 = acc[4*(r*O_MAX) + 4*k    ];
-            uint8x16_t acc1 = acc[4*(r*O_MAX) + 4*k + 1];
-            uint8x16_t acc2 = acc[4*(r*O_MAX) + 4*k + 2];
-            uint8x16_t acc3 = acc[4*(r*O_MAX) + 4*k + 3];
-            uint8x16_t acc4 = acc[4*(r*O_MAX) + 4*k + 4];
-            uint8x16_t acc5 = acc[4*(r*O_MAX) + 4*k + 5];
-            uint8x16_t acc6 = acc[4*(r*O_MAX) + 4*k + 6];
-            uint8x16_t acc7 = acc[4*(r*O_MAX) + 4*k + 7];
-
-
-            uint8x16_t t0 = (temp[4*k + 1] ^ (temp[4*k] >> 4)) & low_nibble_mask;
-            acc[4*(r*O_MAX) + 4*k] =     acc0 ^ temp[4*k] ^ (t0 << 4);
-            acc[4*(r*O_MAX) + 4*k + 4] = acc4 ^ temp[4*k+1] ^ t0;
-
-            uint8x16_t t1 = (temp[4*k + 3] ^ (temp[4*k + 2] >> 4)) & low_nibble_mask;
-
-            acc[4*(r*O_MAX) + 4*k + 1] = acc1 ^ temp[4*k+2] ^ (t1 << 4);
-            acc[4*(r*O_MAX) + 4*k + 5] = acc5 ^ temp[4*k+3] ^ t1;
-
-            uint8x16_t t2 = (temp[4*k + 5] ^ (temp[4*k + 4] >> 4)) & low_nibble_mask;
-
-            acc[4*(r*O_MAX) + 4*k + 2] = acc2 ^ temp[4*k+4] ^ (t2 << 4);
-            acc[4*(r*O_MAX) + 4*k + 6] = acc6 ^ temp[4*k+5] ^ t2;
-
-            uint8x16_t t3 = (temp[4*k + 7] ^ (temp[4*k + 6] >> 4)) & low_nibble_mask;
-
-            acc[4*(r*O_MAX) + 4*k + 3] = acc3 ^ temp[4*k+6] ^ (t3 << 4);
-            acc[4*(r*O_MAX) + 4*k + 7] = acc7 ^ temp[4*k+7] ^ t3;
+            acc[4*(r*O_MAX) + 4*k]     ^= vsliq_n_u8(temp[4*k], temp[4*k+1], 4);
+            acc[4*(r*O_MAX) + 4*k + 4] ^= vsriq_n_u8(temp[4*k+1], temp[4*k], 4);
+            acc[4*(r*O_MAX) + 4*k + 1] ^= vsliq_n_u8(temp[4*k+2], temp[4*k+3], 4);
+            acc[4*(r*O_MAX) + 4*k + 5] ^= vsriq_n_u8(temp[4*k+3], temp[4*k+2], 4);
+            acc[4*(r*O_MAX) + 4*k + 2] ^= vsliq_n_u8(temp[4*k+4], temp[4*k+5], 4);
+            acc[4*(r*O_MAX) + 4*k + 6] ^= vsriq_n_u8(temp[4*k+5], temp[4*k+4], 4);
+            acc[4*(r*O_MAX) + 4*k + 3] ^= vsliq_n_u8(temp[4*k+6], temp[4*k+7], 4);
+            acc[4*(r*O_MAX) + 4*k + 7] ^= vsriq_n_u8(temp[4*k+7], temp[4*k+6], 4);
         }
     }
 }
@@ -256,16 +228,16 @@ inline void mayo_5_Vt_times_L_neon(const uint64_t *_L, const uint8x16_t *V_multa
         for (size_t r = 0; r < V_MAX; r++)
         {
             uint8x16_t in_odd0 = L[4*r*O_MAX + 4*c];
-            uint8x16_t in_even0 = (in_odd0 >> 4) & low_nibble_mask;
+            uint8x16_t in_even0 = in_odd0 >> 4;
             in_odd0 &= low_nibble_mask;
             uint8x16_t in_odd1 = L[4*r*O_MAX + 4*c + 1];
-            uint8x16_t in_even1 = (in_odd1 >> 4) & low_nibble_mask;
+            uint8x16_t in_even1 = in_odd1 >> 4;
             in_odd1 &= low_nibble_mask;
             uint8x16_t in_odd2 = L[4*r*O_MAX + 4*c + 2];
-            uint8x16_t in_even2 = (in_odd2 >> 4) & low_nibble_mask;
+            uint8x16_t in_even2 = in_odd2 >> 4;
             in_odd2 &= low_nibble_mask;
             uint8x16_t in_odd3 = L[4*r*O_MAX + 4*c + 3];
-            uint8x16_t in_even3 = (in_odd3 >> 4) & low_nibble_mask;
+            uint8x16_t in_even3 = in_odd3 >> 4;
             in_odd3 &= low_nibble_mask;
 
             for (k = 0; k < K_OVER_2; k++)
@@ -284,21 +256,14 @@ inline void mayo_5_Vt_times_L_neon(const uint64_t *_L, const uint8x16_t *V_multa
         // convert to normal format and add to accumulator
         for (k = 0; k+1 < K_MAX; k+=2)
         {
-            uint8x16_t t0 = (temp[4*k + 1] ^ (temp[4*k] >> 4)) & low_nibble_mask;
-            acc[4*(k*O_MAX) + 4*c]     ^= temp[4*k] ^ (t0 << 4);
-            acc[4*((k+1)*O_MAX) + 4*c] ^= temp[4*k+1] ^ t0;
-
-            uint8x16_t t1 = (temp[4*k + 3] ^ (temp[4*k + 2] >> 4)) & low_nibble_mask;
-            acc[4*(k*O_MAX) + 4*c + 1]     ^= temp[4*k+2] ^ (t1 << 4);
-            acc[4*((k+1)*O_MAX) + 4*c + 1] ^= temp[4*k+3] ^ t1;
-
-            uint8x16_t t2 = (temp[4*k + 5] ^ (temp[4*k + 4] >> 4)) & low_nibble_mask;
-            acc[4*(k*O_MAX) + 4*c + 2]     ^= temp[4*k+4] ^ (t2 << 4);
-            acc[4*((k+1)*O_MAX) + 4*c + 2] ^= temp[4*k+5] ^ t2;
-
-            uint8x16_t t3 = (temp[4*k + 7] ^ (temp[4*k + 6] >> 4)) & low_nibble_mask;
-            acc[4*(k*O_MAX) + 4*c + 3]     ^= temp[4*k+6] ^ (t3 << 4);
-            acc[4*((k+1)*O_MAX) + 4*c + 3] ^= temp[4*k+7] ^ t3;
+            acc[4*(k*O_MAX) + 4*c]         ^= vsliq_n_u8(temp[4*k], temp[4*k+1], 4);
+            acc[4*((k+1)*O_MAX) + 4*c]     ^= vsriq_n_u8(temp[4*k+1], temp[4*k], 4);
+            acc[4*(k*O_MAX) + 4*c + 1]     ^= vsliq_n_u8(temp[4*k+2], temp[4*k+3], 4);
+            acc[4*((k+1)*O_MAX) + 4*c + 1] ^= vsriq_n_u8(temp[4*k+3], temp[4*k+2], 4);
+            acc[4*(k*O_MAX) + 4*c + 2]     ^= vsliq_n_u8(temp[4*k+4], temp[4*k+5], 4);
+            acc[4*((k+1)*O_MAX) + 4*c + 2] ^= vsriq_n_u8(temp[4*k+5], temp[4*k+4], 4);
+            acc[4*(k*O_MAX) + 4*c + 3]     ^= vsliq_n_u8(temp[4*k+6], temp[4*k+7], 4);
+            acc[4*((k+1)*O_MAX) + 4*c + 3] ^= vsriq_n_u8(temp[4*k+7], temp[4*k+6], 4);
         }
     }
 }
@@ -319,16 +284,16 @@ inline void mayo_5_P1_times_Vt_neon(const uint64_t *_P1, uint8x16_t *V_multabs, 
         for (c=r; c < V_MAX; c++)
         {
             uint8x16_t in_odd0 = P1[4*cols_used];
-            uint8x16_t in_even0 = (in_odd0 >> 4) & low_nibble_mask;
+            uint8x16_t in_even0 = in_odd0 >> 4;
             in_odd0 &= low_nibble_mask;
             uint8x16_t in_odd1 = P1[4*cols_used + 1];
-            uint8x16_t in_even1 = (in_odd1 >> 4) & low_nibble_mask;
+            uint8x16_t in_even1 = in_odd1 >> 4;
             in_odd1 &= low_nibble_mask;
             uint8x16_t in_odd2 = P1[4*cols_used + 2];
-            uint8x16_t in_even2 = (in_odd2 >> 4) & low_nibble_mask;
+            uint8x16_t in_even2 = in_odd2 >> 4;
             in_odd2 &= low_nibble_mask;
             uint8x16_t in_odd3 = P1[4*cols_used + 3];
-            uint8x16_t in_even3 = (in_odd3 >> 4) & low_nibble_mask;
+            uint8x16_t in_even3 = in_odd3 >> 4;
             in_odd3 &= low_nibble_mask;
             cols_used ++;
 
@@ -348,21 +313,14 @@ inline void mayo_5_P1_times_Vt_neon(const uint64_t *_P1, uint8x16_t *V_multabs, 
         // convert to normal format and add to accumulator
         for (k = 0; k + 1 < K_MAX; k+=2)
         {
-            uint8x16_t t0 = (temp[4*k + 1] ^ (temp[4*k] >> 4)) & low_nibble_mask;
-            acc[4*(r*K_MAX) + 4*k] ^= temp[4*k] ^ (t0 << 4);
-            acc[4*(r*K_MAX) + 4*k + 4] ^= temp[4*k+1] ^ t0;
-
-            uint8x16_t t1 = (temp[4*k + 3] ^ (temp[4*k+2] >> 4)) & low_nibble_mask;
-            acc[4*(r*K_MAX) + 4*k + 1] ^= temp[4*k+2] ^ (t1 << 4);
-            acc[4*(r*K_MAX) + 4*k + 5] ^= temp[4*k+3] ^ t1;
-
-            uint8x16_t t2 = (temp[4*k + 5] ^ (temp[4*k+4] >> 4)) & low_nibble_mask;
-            acc[4*(r*K_MAX) + 4*k + 2] ^= temp[4*k+4] ^ (t2 << 4);
-            acc[4*(r*K_MAX) + 4*k + 6] ^= temp[4*k+5] ^ t2;
-
-            uint8x16_t t3 = (temp[4*k + 7] ^ (temp[4*k+6] >> 4)) & low_nibble_mask;
-            acc[4*(r*K_MAX) + 4*k + 3] ^= temp[4*k+6] ^ (t3 << 4);
-            acc[4*(r*K_MAX) + 4*k + 7] ^= temp[4*k+7] ^ t3;
+            acc[4*(r*K_MAX) + 4*k]     ^= vsliq_n_u8(temp[4*k], temp[4*k+1], 4);
+            acc[4*(r*K_MAX) + 4*k + 4] ^= vsriq_n_u8(temp[4*k+1], temp[4*k], 4);
+            acc[4*(r*K_MAX) + 4*k + 1] ^= vsliq_n_u8(temp[4*k+2], temp[4*k+3], 4);
+            acc[4*(r*K_MAX) + 4*k + 5] ^= vsriq_n_u8(temp[4*k+3], temp[4*k+2], 4);
+            acc[4*(r*K_MAX) + 4*k + 2] ^= vsliq_n_u8(temp[4*k+4], temp[4*k+5], 4);
+            acc[4*(r*K_MAX) + 4*k + 6] ^= vsriq_n_u8(temp[4*k+5], temp[4*k+4], 4);
+            acc[4*(r*K_MAX) + 4*k + 3] ^= vsliq_n_u8(temp[4*k+6], temp[4*k+7], 4);
+            acc[4*(r*K_MAX) + 4*k + 7] ^= vsriq_n_u8(temp[4*k+7], temp[4*k+6], 4);
         }
     }
 }
@@ -382,16 +340,16 @@ inline void mayo_5_Vt_times_Pv_neon(const uint64_t *_Pv, const uint8x16_t *V_mul
         for (size_t r = 0; r < V_MAX; r++)
         {
             uint8x16_t in_odd0 = Pv[4*r*K_MAX + 4*c];
-            uint8x16_t in_even0 = (in_odd0 >> 4) & low_nibble_mask;
+            uint8x16_t in_even0 = in_odd0 >> 4;
             in_odd0 &= low_nibble_mask;
             uint8x16_t in_odd1 = Pv[4*r*K_MAX + 4*c + 1];
-            uint8x16_t in_even1 = (in_odd1 >> 4) & low_nibble_mask;
+            uint8x16_t in_even1 = in_odd1 >> 4;
             in_odd1 &= low_nibble_mask;
             uint8x16_t in_odd2 = Pv[4*r*K_MAX + 4*c + 2];
-            uint8x16_t in_even2 = (in_odd2 >> 4) & low_nibble_mask;
+            uint8x16_t in_even2 = in_odd2 >> 4;
             in_odd2 &= low_nibble_mask;
             uint8x16_t in_odd3 = Pv[4*r*K_MAX + 4*c + 3];
-            uint8x16_t in_even3 = (in_odd3 >> 4) & low_nibble_mask;
+            uint8x16_t in_even3 = in_odd3 >> 4;
             in_odd3 &= low_nibble_mask;
 
             for (k = 0; k < K_OVER_2; k++)
@@ -410,21 +368,14 @@ inline void mayo_5_Vt_times_Pv_neon(const uint64_t *_Pv, const uint8x16_t *V_mul
         // convert to normal format and add to accumulator
         for (k = 0; k+1 < K_MAX; k+=2)
         {
-            uint8x16_t t0 = (temp[4*k + 1] ^ (temp[4*k] >> 4)) & low_nibble_mask;
-            acc[4*(k*K_MAX) + 4*c] ^= temp[4*k] ^ (t0 << 4);
-            acc[4*((k+1)*K_MAX) + 4*c] ^= temp[4*k+1] ^ t0;
-
-            uint8x16_t t1 = (temp[4*k + 3] ^ (temp[4*k+2] >> 4)) & low_nibble_mask;
-            acc[4*(k*K_MAX) + 4*c + 1] ^= temp[4*k+2] ^ (t1 << 4);
-            acc[4*((k+1)*K_MAX) + 4*c + 1] ^= temp[4*k+3] ^ t1;
-
-            uint8x16_t t2 = (temp[4*k + 5] ^ (temp[4*k+4] >> 4)) & low_nibble_mask;
-            acc[4*(k*K_MAX) + 4*c + 2] ^= temp[4*k+4] ^ (t2 << 4);
-            acc[4*((k+1)*K_MAX) + 4*c + 2] ^= temp[4*k+5] ^ t2;
-
-            uint8x16_t t3 = (temp[4*k + 7] ^ (temp[4*k+6] >> 4)) & low_nibble_mask;
-            acc[4*(k*K_MAX) + 4*c + 3] ^= temp[4*k+6] ^ (t3 << 4);
-            acc[4*((k+1)*K_MAX) + 4*c + 3] ^= temp[4*k+7] ^ t3;
+            acc[4*(k*K_MAX) + 4*c]         ^= vsliq_n_u8(temp[4*k], temp[4*k+1], 4);
+            acc[4*((k+1)*K_MAX) + 4*c]     ^= vsriq_n_u8(temp[4*k+1], temp[4*k], 4);
+            acc[4*(k*K_MAX) + 4*c + 1]     ^= vsliq_n_u8(temp[4*k+2], temp[4*k+3], 4);
+            acc[4*((k+1)*K_MAX) + 4*c + 1] ^= vsriq_n_u8(temp[4*k+3], temp[4*k+2], 4);
+            acc[4*(k*K_MAX) + 4*c + 2]     ^= vsliq_n_u8(temp[4*k+4], temp[4*k+5], 4);
+            acc[4*((k+1)*K_MAX) + 4*c + 2] ^= vsriq_n_u8(temp[4*k+5], temp[4*k+4], 4);
+            acc[4*(k*K_MAX) + 4*c + 3]     ^= vsliq_n_u8(temp[4*k+6], temp[4*k+7], 4);
+            acc[4*((k+1)*K_MAX) + 4*c + 3] ^= vsriq_n_u8(temp[4*k+7], temp[4*k+6], 4);
         }
     }
 }
@@ -449,16 +400,16 @@ inline void mayo_5_P1_times_S1_plus_P2_times_S2_neon(const uint64_t *_P1, const 
         for (c=r; c < V_MAX; c++)
         {
             uint8x16_t in_odd0 = P1[4*P1_cols_used];
-            uint8x16_t in_even0 = (in_odd0 >> 4) & low_nibble_mask;
+            uint8x16_t in_even0 = in_odd0 >> 4;
             in_odd0 &= low_nibble_mask;
             uint8x16_t in_odd1 = P1[4*P1_cols_used + 1];
-            uint8x16_t in_even1 = (in_odd1 >> 4) & low_nibble_mask;
+            uint8x16_t in_even1 = in_odd1 >> 4;
             in_odd1 &= low_nibble_mask;
             uint8x16_t in_odd2 = P1[4*P1_cols_used + 2];
-            uint8x16_t in_even2 = (in_odd2 >> 4) & low_nibble_mask;
+            uint8x16_t in_even2 = in_odd2 >> 4;
             in_odd2 &= low_nibble_mask;
             uint8x16_t in_odd3 = P1[4*P1_cols_used + 3];
-            uint8x16_t in_even3 = (in_odd3 >> 4) & low_nibble_mask;
+            uint8x16_t in_even3 = in_odd3 >> 4;
             in_odd3 &= low_nibble_mask;
             P1_cols_used ++;
 
@@ -479,17 +430,17 @@ inline void mayo_5_P1_times_S1_plus_P2_times_S2_neon(const uint64_t *_P1, const 
         for (c=0; c < O_MAX; c++)
         {
             uint8x16_t in_odd0 = P2[4*r*O_MAX + 4*c];
-            uint8x16_t in_even0 = (in_odd0 >> 4) & low_nibble_mask;
+            uint8x16_t in_even0 = in_odd0 >> 4;
             in_odd0 &= low_nibble_mask;
             uint8x16_t in_odd1 = P2[4*r*O_MAX + 4*c + 1];
-            uint8x16_t in_even1 = (in_odd1 >> 4) & low_nibble_mask;
+            uint8x16_t in_even1 = in_odd1 >> 4;
             in_odd1 &= low_nibble_mask;
             uint8x16_t in_odd2 = P2[4*r*O_MAX + 4*c + 2];
-            uint8x16_t in_even2 = (in_odd2 >> 4) & low_nibble_mask;
+            uint8x16_t in_even2 = in_odd2 >> 4;
             in_odd2 &= low_nibble_mask;
             in_odd1 &= low_nibble_mask;
             uint8x16_t in_odd3 = P2[4*r*O_MAX + 4*c + 3];
-            uint8x16_t in_even3 = (in_odd3 >> 4) & low_nibble_mask;
+            uint8x16_t in_even3 = in_odd3 >> 4;
             in_odd3 &= low_nibble_mask;
 
             for (k = 0; k < K_OVER_2; k++)
@@ -508,21 +459,14 @@ inline void mayo_5_P1_times_S1_plus_P2_times_S2_neon(const uint64_t *_P1, const 
         // convert to normal format and add to accumulator
         for (k = 0; k + 1 < K_MAX; k+=2)
         {
-            uint8x16_t t0 = (temp[4*k + 1] ^ (temp[4*k] >> 4)) & low_nibble_mask;
-            acc[4*(r*K_MAX) + 4*k] ^= temp[4*k] ^ (t0 << 4);
-            acc[4*(r*K_MAX) + 4*k + 4] ^= temp[4*k+1] ^ t0;
-
-            uint8x16_t t1 = (temp[4*k + 3] ^ (temp[4*k + 2] >> 4)) & low_nibble_mask;
-            acc[4*(r*K_MAX) + 4*k + 1] ^= temp[4*k+2] ^ (t1 << 4);
-            acc[4*(r*K_MAX) + 4*k + 5] ^= temp[4*k+3] ^ t1;
-
-            uint8x16_t t2 = (temp[4*k + 5] ^ (temp[4*k + 4] >> 4)) & low_nibble_mask;
-            acc[4*(r*K_MAX) + 4*k + 2] ^= temp[4*k+4] ^ (t2 << 4);
-            acc[4*(r*K_MAX) + 4*k + 6] ^= temp[4*k+5] ^ t2;
-
-            uint8x16_t t3 = (temp[4*k + 7] ^ (temp[4*k + 6] >> 4)) & low_nibble_mask;
-            acc[4*(r*K_MAX) + 4*k + 3] ^= temp[4*k+6] ^ (t3 << 4);
-            acc[4*(r*K_MAX) + 4*k + 7] ^= temp[4*k+7] ^ t3;
+            acc[4*(r*K_MAX) + 4*k]     ^= vsliq_n_u8(temp[4*k], temp[4*k+1], 4);
+            acc[4*(r*K_MAX) + 4*k + 4] ^= vsriq_n_u8(temp[4*k+1], temp[4*k], 4);
+            acc[4*(r*K_MAX) + 4*k + 1] ^= vsliq_n_u8(temp[4*k+2], temp[4*k+3], 4);
+            acc[4*(r*K_MAX) + 4*k + 5] ^= vsriq_n_u8(temp[4*k+3], temp[4*k+2], 4);
+            acc[4*(r*K_MAX) + 4*k + 2] ^= vsliq_n_u8(temp[4*k+4], temp[4*k+5], 4);
+            acc[4*(r*K_MAX) + 4*k + 6] ^= vsriq_n_u8(temp[4*k+5], temp[4*k+4], 4);
+            acc[4*(r*K_MAX) + 4*k + 3] ^= vsliq_n_u8(temp[4*k+6], temp[4*k+7], 4);
+            acc[4*(r*K_MAX) + 4*k + 7] ^= vsriq_n_u8(temp[4*k+7], temp[4*k+6], 4);
         }
     }
 }
@@ -545,16 +489,16 @@ inline void mayo_5_P3_times_S2_neon(const uint64_t *_P3, uint8x16_t *S2_multabs,
         for (c=r; c < O_MAX; c++)
         {
             uint8x16_t in_odd0 = P3[4*cols_used];
-            uint8x16_t in_even0 = (in_odd0 >> 4) & low_nibble_mask;
+            uint8x16_t in_even0 = in_odd0 >> 4;
             in_odd0 &= low_nibble_mask;
             uint8x16_t in_odd1 = P3[4*cols_used + 1];
-            uint8x16_t in_even1 = (in_odd1 >> 4) & low_nibble_mask;
+            uint8x16_t in_even1 = in_odd1 >> 4;
             in_odd1 &= low_nibble_mask;
             uint8x16_t in_odd2 = P3[4*cols_used + 2];
-            uint8x16_t in_even2 = (in_odd2 >> 4) & low_nibble_mask;
+            uint8x16_t in_even2 = in_odd2 >> 4;
             in_odd2 &= low_nibble_mask;
             uint8x16_t in_odd3 = P3[4*cols_used + 3];
-            uint8x16_t in_even3 = (in_odd3 >> 4) & low_nibble_mask;
+            uint8x16_t in_even3 = in_odd3 >> 4;
             in_odd3 &= low_nibble_mask;
             cols_used ++;
 
@@ -574,21 +518,14 @@ inline void mayo_5_P3_times_S2_neon(const uint64_t *_P3, uint8x16_t *S2_multabs,
         // convert to normal format and add to accumulator
         for (k = 0; k + 1 < K_MAX; k+=2)
         {
-            uint8x16_t t0 = (temp[4*k + 1] ^ (temp[4*k] >> 4)) & low_nibble_mask;
-            acc[4*(r*K_MAX) + 4*k] ^= temp[4*k] ^ (t0 << 4);
-            acc[4*(r*K_MAX) + 4*k + 4] ^= temp[4*k+1] ^ t0;
-
-            uint8x16_t t1 = (temp[4*k + 3] ^ (temp[4*k+2] >> 4)) & low_nibble_mask;
-            acc[4*(r*K_MAX) + 4*k + 1] ^= temp[4*k+2] ^ (t1 << 4);
-            acc[4*(r*K_MAX) + 4*k + 5] ^= temp[4*k+3] ^ t1;
-
-            uint8x16_t t2 = (temp[4*k + 5] ^ (temp[4*k+4] >> 4)) & low_nibble_mask;
-            acc[4*(r*K_MAX) + 4*k + 2] ^= temp[4*k+4] ^ (t2 << 4);
-            acc[4*(r*K_MAX) + 4*k + 6] ^= temp[4*k+5] ^ t2;
-
-            uint8x16_t t3 = (temp[4*k + 7] ^ (temp[4*k+6] >> 4)) & low_nibble_mask;
-            acc[4*(r*K_MAX) + 4*k + 3] ^= temp[4*k+6] ^ (t3 << 4);
-            acc[4*(r*K_MAX) + 4*k + 7] ^= temp[4*k+7] ^ t3;
+            acc[4*(r*K_MAX) + 4*k]     ^= vsliq_n_u8(temp[4*k], temp[4*k+1], 4);
+            acc[4*(r*K_MAX) + 4*k + 4] ^= vsriq_n_u8(temp[4*k+1], temp[4*k], 4);
+            acc[4*(r*K_MAX) + 4*k + 1] ^= vsliq_n_u8(temp[4*k+2], temp[4*k+3], 4);
+            acc[4*(r*K_MAX) + 4*k + 5] ^= vsriq_n_u8(temp[4*k+3], temp[4*k+2], 4);
+            acc[4*(r*K_MAX) + 4*k + 2] ^= vsliq_n_u8(temp[4*k+4], temp[4*k+5], 4);
+            acc[4*(r*K_MAX) + 4*k + 6] ^= vsriq_n_u8(temp[4*k+5], temp[4*k+4], 4);
+            acc[4*(r*K_MAX) + 4*k + 3] ^= vsliq_n_u8(temp[4*k+6], temp[4*k+7], 4);
+            acc[4*(r*K_MAX) + 4*k + 7] ^= vsriq_n_u8(temp[4*k+7], temp[4*k+6], 4);
         }
     }
 }
@@ -613,16 +550,16 @@ inline void mayo_5_S2t_times_PS2_neon(const uint64_t *_PS2, uint8x16_t *S2_multa
         for (size_t r = 0; r < O_MAX; r++)
         {
             uint8x16_t in_odd0 = PS2[4*r*K_MAX + 4*c];
-            uint8x16_t in_even0 = (in_odd0 >> 4) & low_nibble_mask;
+            uint8x16_t in_even0 = in_odd0 >> 4;
             in_odd0 &= low_nibble_mask;
             uint8x16_t in_odd1 = PS2[4*r*K_MAX + 4*c + 1];
-            uint8x16_t in_even1 = (in_odd1 >> 4) & low_nibble_mask;
+            uint8x16_t in_even1 = in_odd1 >> 4;
             in_odd1 &= low_nibble_mask;
             uint8x16_t in_odd2 = PS2[4*r*K_MAX + 4*c + 2];
-            uint8x16_t in_even2 = (in_odd2 >> 4) & low_nibble_mask;
+            uint8x16_t in_even2 = in_odd2 >> 4;
             in_odd2 &= low_nibble_mask;
             uint8x16_t in_odd3 = PS2[4*r*K_MAX + 4*c + 3];
-            uint8x16_t in_even3 = (in_odd3 >> 4) & low_nibble_mask;
+            uint8x16_t in_even3 = in_odd3 >> 4;
             in_odd3 &= low_nibble_mask;
 
             for (k = 0; k < K_OVER_2; k++)
@@ -641,21 +578,14 @@ inline void mayo_5_S2t_times_PS2_neon(const uint64_t *_PS2, uint8x16_t *S2_multa
         // convert to normal format and add to accumulator
         for (k = 0; k+1 < K_MAX; k+=2)
         {
-            uint8x16_t t0 = (temp[4*k + 1] ^ (temp[4*k] >> 4)) & low_nibble_mask;
-            acc[4*(k*K_MAX) + 4*c] ^= temp[4*k] ^ (t0 << 4);
-            acc[4*((k+1)*K_MAX) + 4*c] ^= temp[4*k+1] ^ t0;
-
-            uint8x16_t t1 = (temp[4*k + 3] ^ (temp[4*k+2] >> 4)) & low_nibble_mask;
-            acc[4*(k*K_MAX) + 4*c + 1] ^= temp[4*k+2] ^ (t1 << 4);
-            acc[4*((k+1)*K_MAX) + 4*c + 1] ^= temp[4*k+3] ^ t1;
-
-            uint8x16_t t2 = (temp[4*k + 5] ^ (temp[4*k+4] >> 4)) & low_nibble_mask;
-            acc[4*(k*K_MAX) + 4*c + 2] ^= temp[4*k+4] ^ (t2 << 4);
-            acc[4*((k+1)*K_MAX) + 4*c + 2] ^= temp[4*k+5] ^ t2;
-
-            uint8x16_t t3 = (temp[4*k + 7] ^ (temp[4*k+6] >> 4)) & low_nibble_mask;
-            acc[4*(k*K_MAX) + 4*c + 3] ^= temp[4*k+6] ^ (t3 << 4);
-            acc[4*((k+1)*K_MAX) + 4*c + 3] ^= temp[4*k+7] ^ t3;
+            acc[4*(k*K_MAX) + 4*c]         ^= vsliq_n_u8(temp[4*k], temp[4*k+1], 4);
+            acc[4*((k+1)*K_MAX) + 4*c]     ^= vsriq_n_u8(temp[4*k+1], temp[4*k], 4);
+            acc[4*(k*K_MAX) + 4*c + 1]     ^= vsliq_n_u8(temp[4*k+2], temp[4*k+3], 4);
+            acc[4*((k+1)*K_MAX) + 4*c + 1] ^= vsriq_n_u8(temp[4*k+3], temp[4*k+2], 4);
+            acc[4*(k*K_MAX) + 4*c + 2]     ^= vsliq_n_u8(temp[4*k+4], temp[4*k+5], 4);
+            acc[4*((k+1)*K_MAX) + 4*c + 2] ^= vsriq_n_u8(temp[4*k+5], temp[4*k+4], 4);
+            acc[4*(k*K_MAX) + 4*c + 3]     ^= vsliq_n_u8(temp[4*k+6], temp[4*k+7], 4);
+            acc[4*((k+1)*K_MAX) + 4*c + 3] ^= vsriq_n_u8(temp[4*k+7], temp[4*k+6], 4);
         }
     }
 }
