@@ -5,7 +5,7 @@
  * https://gist.github.com/dougallj/5bafb113492047c865c0c8cfbc930155#file-m1_robsize-c-L390
  */
 
-#ifdef TARGET_ARM64
+#if defined(TARGET_OS_MAC) && defined(TARGET_ARM64)
 
 #include <dlfcn.h>
 #include <pthread.h>
@@ -145,10 +145,6 @@ extern unsigned long long int rdtsc(void)
     }
     return g_counters[2];
 }
-
-#else
-
-#pragma message("m1cycles is not used, ISO C is happy now!")
 
 #endif
 

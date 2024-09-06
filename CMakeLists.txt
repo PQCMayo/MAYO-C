@@ -6,7 +6,6 @@ project(MAYO VERSION 1.0 LANGUAGES C CXX ASM)
 set(MAYO_SO_VERSION "0")
 set(CMAKE_C_STANDARD 99)
 
-set_property(GLOBAL PROPERTY CTEST_TARGETS_ADDED 1)
 include(CTest)
 
 option(ENABLE_STRICT "Build with strict compile options." ON)

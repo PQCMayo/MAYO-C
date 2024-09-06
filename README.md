@@ -36,7 +36,8 @@ The following build options have been used to report performance numbers in the 
 2. Optimized (AES-NI enabled): `cmake -DMAYO_BUILD_TYPE=opt -DENABLE_AESNI=ON ..`
 3. Optimized (AES-NI disabled): `cmake -DMAYO_BUILD_TYPE=opt -DENABLE_AESNI=OFF ..`
 4. AVX2: `cmake -DMAYO_BUILD_TYPE=avx2 -DENABLE_AESNI=ON ..`
-5. A64 NEON: `cmake -DMAYO_BUILD_TYPE=neon ..`
+5. A64 M1 NEON: `cmake -DMAYO_BUILD_TYPE=neon -DENABLE_AESNI=ON ..`
+6. A64 RPi4 Cortex-A72 NEON: `cmake -DMAYO_BUILD_TYPE=neon -DENABLE_AESNI=OFF ..`
 
 ## Build options
 
@@ -65,7 +66,7 @@ Specifies the build type for which Mayo is built. The options are `ref`, `opt` a
 - `ref` builds MAYO implemented with portable C code for native target architecture, using run-time parameters.
 - `opt` builds MAYO implemented with optimized portable C code, compiled with `-march=native` (if available) and AES acceleration (if available)
 - `avx2` builds MAYO implemented with optimized AVX2 code, compiled with `-march=native` (if available) and AES acceleration (if available)
-- `neon` builds MAYO implemented with optimized NEON code, compiled with `-march=native` (if available) and AES acceleration
+- `neon` builds MAYO implemented with optimized NEON code, compiled with `-march=native` (if available) and AES acceleration (if available)
 
 The default build type if none is specified is `opt`.
 
@@ -125,6 +126,7 @@ A benchmarking suite is built and runs with the following command, where `params
 
 If `MAYO_BUILD_TYPE` is `opt`, `avx2` or `neon`:
 - `test/mayo_bench_<param> <runs>`,
+- On Apple M1 chips, this must be run with root permission.
 
 If `MAYO_BUILD_TYPE` is `ref`:
 - `test/mayo_bench <param> <runs>`,

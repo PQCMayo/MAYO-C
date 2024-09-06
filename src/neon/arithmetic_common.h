@@ -25,7 +25,7 @@ static const unsigned char __gf16_reduce[16] __attribute__((aligned(16))) = {
 static inline
 uint8x16_t _gf16v_mul_unpack_neon( uint8x16_t a0 , uint8x16_t b0 , uint8x16_t tab_reduce )
 {
-    uint8x16_t ab = vreinterpretq_u8_p8(vmulq_p8( a0 , b0 ));
+    uint8x16_t ab = vreinterpretq_u8_p8(vmulq_p8(vreinterpretq_p8_u8(a0) , vreinterpretq_p8_u8(b0)));
     return ab^vqtbl1q_u8( tab_reduce , vshrq_n_u8(ab,4) );
 }
 
