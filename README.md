@@ -160,9 +160,11 @@ Third party code is used in some test and common code files:
 
 - `common/aes_c.c`; MIT: "Copyright (c) 2016 Thomas Pornin <pornin@bolet.org>"
 - `common/aes128ctr.c`: MIT: "Copyright (c) 2016-2021 Open Quantum Safe project" and Public Domain
+- `common/aes_neon.c`: MIT: "Copyright (c) 2024 ChristerKnorborg" and Public Domain
 - `common/fips202.c`: Public Domain
 - `common/randombytes_system.c`: MIT: Copyright (c) 2017 Daan Sprenkels <hello@dsprenkels.com>
 - `apps/PQCgenKAT_sign.c`, `common/randombytes_ctrdrbg.c`, `test/test_kat.c`: by NIST (Public Domain)
+- `test/m1cycles.{c,h}`, Apache 2.0 or Public Domain
 
 See also the SPDX License Identifiers in the respective files.
 
