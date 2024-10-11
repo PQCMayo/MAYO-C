@@ -1,10 +1,10 @@
-set(SOURCE_FILES_COMMON_SYS common/randombytes_system.c common/aes_c.c common/aes128ctr.c common/fips202.c common/mem.c)
+set(SOURCE_FILES_COMMON_SYS common/randombytes_system.c common/aes_c.c common/aes128ctr.c common/aes_neon.c common/fips202.c common/mem.c)
 
 add_library(mayo_common_sys ${SOURCE_FILES_COMMON_SYS})
 target_include_directories(mayo_common_sys PRIVATE common ../include)
 target_compile_options(mayo_common_sys PUBLIC ${C_OPT_FLAGS})
 
-set(SOURCE_FILES_COMMON_TEST common/randombytes_ctrdrbg.c common/aes_c.c common/aes128ctr.c common/fips202.c common/mem.c)
+set(SOURCE_FILES_COMMON_TEST common/randombytes_ctrdrbg.c common/aes_c.c common/aes128ctr.c common/aes_neon.c common/fips202.c common/mem.c)
 
 add_library(mayo_common_test ${SOURCE_FILES_COMMON_TEST})
 target_include_directories(mayo_common_test PRIVATE common ../include)
@@ -21,12 +21,22 @@ if (ENABLE_AESNI)
     target_compile_definitions(mayo_common_test PUBLIC ENABLE_AESNI)
 endif()
 
+if (ENABLE_AESNEON)
+    message("AES-NEON enabled")
+    target_compile_definitions(mayo_common_sys PUBLIC ENABLE_AESNEON)
+    target_compile_definitions(mayo_common_test PUBLIC ENABLE_AESNEON)
+endif()
+
 set(SOURCE_FILES_MAYO mayo.c params.c arithmetic.c)
 
 if (${MAYO_BUILD_TYPE} MATCHES "avx2")
     message("Building for avx2")
     set(INC_PLATFORM ${PROJECT_SOURCE_DIR}/src/AVX2)
     add_definitions(-DMAYO_AVX)
+elseif (${MAYO_BUILD_TYPE} MATCHES "neon")
+    message("Building for neon")
+    set(INC_PLATFORM ${PROJECT_SOURCE_DIR}/src/neon)
+    add_definitions(-DMAYO_NEON)
 else()
     set(INC_PLATFORM ${PROJECT_SOURCE_DIR}/src/generic)
 endif()

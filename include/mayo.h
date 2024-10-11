@@ -137,6 +137,8 @@
 #define MAYO_NAMESPACE(s) PARAM_NAME3(opt, s)
 #elif defined(MAYO_BUILD_TYPE_AVX2)
 #define MAYO_NAMESPACE(s) PARAM_NAME3(avx2, s)
+#elif defined(MAYO_BUILD_TYPE_NEON)
+#define MAYO_NAMESPACE(s) PARAM_NAME3(neon, s)
 #else
 #error "Build type not known"
 #endif
@@ -370,7 +372,7 @@ int mayo_open(const mayo_params_t *p, unsigned char *m,
  *
  * The implementation corresponds to Mayo.CompactKeyGen() in the Mayo spec.
  * The caller is responsible to allocate sufficient memory to hold pk and sk.
- * 
+ *
  * outputs a pair (csk, cpk) \in B^{csk_bytes} x B^{cpk_bytes}, where csk and
  * cpk are compact representations of a Mayo secret key and public key
  *
