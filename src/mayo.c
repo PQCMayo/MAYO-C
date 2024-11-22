@@ -126,6 +126,9 @@ int mayo_sign(const mayo_params_t *p, unsigned char *sm,
     const int param_digest_bytes = PARAM_digest_bytes(p);
     const int param_sk_seed_bytes = PARAM_sk_seed_bytes(p);
     const int param_salt_bytes = PARAM_salt_bytes(p);
+#ifdef TARGET_BIG_ENDIAN
+    const int param_P2_bytes = PARAM_P2_bytes(p);
+#endif
 
     ret = mayo_expand_sk(p, csk, &sk);
     if (ret != MAYO_OK) {
