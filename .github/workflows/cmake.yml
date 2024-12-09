@@ -136,25 +136,25 @@ jobs:
           rm -rf build
           cmake -Bbuild -DCMAKE_BUILD_TYPE=ASAN -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DCMAKE_C_COMPILER=clang
           cmake --build build
-          ctest -v --test-dir build
+          ctest -V --test-dir build
 
     - name: Memory Sanitizer MSAN
       run: |
           rm -rf build
           cmake -Bbuild -DCMAKE_BUILD_TYPE=MSAN -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DCMAKE_C_COMPILER=clang
           cmake --build build
-          ctest -v --test-dir build
+          ctest -V --test-dir build
 
     - name: Leak Sanitizer LSAN
       run: |
           rm -rf build
           cmake -Bbuild -DCMAKE_BUILD_TYPE=LSAN -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DCMAKE_C_COMPILER=clang
           cmake --build build
-          ctest -v --test-dir build
+          ctest -V --test-dir build
 
     - name: Undefined Behavior Sanitizer UBSAN
       run: |
           rm -rf build
           cmake -Bbuild -DCMAKE_BUILD_TYPE=UBSAN -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DCMAKE_C_COMPILER=clang
           cmake --build build
-          ctest -v --test-dir build
+          ctest -V --test-dir build
