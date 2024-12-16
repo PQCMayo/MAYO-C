@@ -93,22 +93,6 @@ static inline void mat_add(const unsigned char *a, const unsigned char *b,
     }
 }
 
-static
-inline void m_vec_copy(int m_legs, const uint64_t *in,
-                                 uint64_t *out) {
-    for (int i = 0; i < m_legs * 2; i++) {
-        out[i] = in[i];
-    }
-}
-
-static
-inline void m_vec_add(int m_legs, const uint64_t *in,
-                                uint64_t *acc) {
-    for (int i = 0; i < m_legs * 2; i++) {
-        acc[i] ^= in[i];
-    }
-}
-
 static inline uint64_t gf16v_mul_u64( uint64_t a, uint8_t b ) {
     uint64_t mask_msb = 0x8888888888888888ULL;
     uint64_t a_msb;
@@ -141,16 +125,13 @@ static inline uint64_t gf16v_mul_u64( uint64_t a, uint8_t b ) {
 // This implements arithmetic for nibble-packed vectors of m field elements in Z_2[x]/(x^4+x+1)
 // gf16 := gf2[x]/(x^4+x+1)
  
-static inline void m_vec_mul_add(int m_legs, const uint64_t *in, unsigned char a, uint64_t *acc) {
-    for(int i=0; i < m_legs*2;i++){
-        acc[i] ^= gf16v_mul_u64(in[i], a);        
-    }
-}
+static inline uint32_t mul_table(uint8_t b){
+    uint32_t x = ((uint32_t) b) * 0x08040201;
 
-static inline void m_vec_mul_add_x(int m_legs, const uint64_t *in, uint64_t *acc) {
-    for(int i=0;i<m_legs*2;i++){
-        acc[i] ^= gf16v_mul_u64(in[i], 0x2);
-    }
+    uint32_t high_nibble_mask = 0xf0f0f0f0;
+
+    uint32_t high_half = x & high_nibble_mask;
+    return (x ^ (high_half >> 4) ^ (high_half >> 3));
 }
 
 #endif

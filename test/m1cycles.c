@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0 and Public Domain
+
 /*
  * Modified from
  * https://github.com/GMUCERG/PQC_NEON/blob/main/neon/kyber/m1cycles.c, Duc Tri Nguyen (CERG GMU)

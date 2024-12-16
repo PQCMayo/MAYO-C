@@ -98,9 +98,9 @@ static int bench_sig(const mayo_params_t *p, int runs, int csv) {
     const int m_len = 32;
 
     unsigned char *pk  = calloc(PARAM_cpk_bytes(p), 1);
-    unsigned char *epk  = calloc(PARAM_epk_bytes(p), 1);
+    uint64_t *epk  = calloc(1, sizeof(pk_t));
     unsigned char *sk  = calloc(PARAM_csk_bytes(p), 1);
-    sk_t *esk  = calloc(sizeof(sk_t), 1);
+    sk_t *esk  = calloc(1, sizeof(sk_t));
     unsigned char *sig = calloc(PARAM_sig_bytes(p) + m_len, 1);
     unsigned char *m   = calloc(m_len, 1);
     size_t len = PARAM_sig_bytes(p);

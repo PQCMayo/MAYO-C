@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+
 set(SOURCE_FILES_COMMON_SYS common/randombytes_system.c common/aes_c.c common/aes128ctr.c common/aes_neon.c common/fips202.c common/mem.c)
 
 add_library(mayo_common_sys ${SOURCE_FILES_COMMON_SYS})
@@ -31,11 +33,11 @@ set(SOURCE_FILES_MAYO mayo.c params.c arithmetic.c)
 
 if (${MAYO_BUILD_TYPE} MATCHES "avx2")
     message("Building for avx2")
-    set(INC_PLATFORM ${PROJECT_SOURCE_DIR}/src/AVX2)
+    set(INC_PLATFORM ${PROJECT_SOURCE_DIR}/src/AVX2 ${PROJECT_SOURCE_DIR}/src/generic)
     add_definitions(-DMAYO_AVX)
 elseif (${MAYO_BUILD_TYPE} MATCHES "neon")
     message("Building for neon")
-    set(INC_PLATFORM ${PROJECT_SOURCE_DIR}/src/neon)
+    set(INC_PLATFORM ${PROJECT_SOURCE_DIR}/src/neon ${PROJECT_SOURCE_DIR}/src/generic)
     add_definitions(-DMAYO_NEON)
 else()
     set(INC_PLATFORM ${PROJECT_SOURCE_DIR}/src/generic)

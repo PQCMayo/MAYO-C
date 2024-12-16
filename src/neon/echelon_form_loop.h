@@ -28,7 +28,7 @@ for (int row = pivot_row_lower_bound;
 
 /* multiply pivot row by inverse of pivot */
 inverse = inverse_f(pivot);
-uint8x16_t inverse_multab = gf16v_get_multab_neon(inverse);
+uint8x16_t inverse_multab = gf16v_get_multab(inverse);
 
 for (int j = pivot_col_rounded; j < NEON_REGS_PER_ROW; j++) {
     _pivot_row[j] = vqtbl1q_u8(inverse_multab, _pivot_row[j]);
@@ -40,7 +40,7 @@ for (int row = pivot_row_lower_bound; row < nrows; row++) {
     unsigned char below_pivot =  (unsigned char) (ct_is_greater_than(row, pivot_row));
     unsigned char elt_to_elim = A_bytes[row*NEON_REGS_PER_ROW*16 + pivot_col];
 
-    uint8x16_t multab = gf16v_get_multab_neon(below_pivot & elt_to_elim);
+    uint8x16_t multab = gf16v_get_multab(below_pivot & elt_to_elim);
     if (row <= pivot_row_upper_bound) {
         uint8x16_t mask = vmovq_n_u8(~ct_compare_32(row, pivot_row) & ~pivot_is_zero);
         for (int col = pivot_col_rounded; col < NEON_REGS_PER_ROW; col++) {

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef M1CYCLES_H
 #define M1CYCLES_H
 

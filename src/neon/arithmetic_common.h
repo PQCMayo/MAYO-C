@@ -4,9 +4,6 @@
 #define ARITHMETIC_COMMON_H
 
 #include <mayo.h>
-#include <arithmetic_64.h>
-#include <arithmetic_96.h>
-#include <arithmetic_128.h>
 #include <stdalign.h>
 #include <stdint.h>
 
@@ -23,49 +20,57 @@ static const unsigned char __gf16_reduce[16] __attribute__((aligned(16))) = {
 };
 
 static inline
-uint8x16_t _gf16v_mul_unpack_neon( uint8x16_t a0 , uint8x16_t b0 , uint8x16_t tab_reduce )
+uint8x16_t _gf16v_mul_unpack( uint8x16_t a0 , uint8x16_t b0 , uint8x16_t tab_reduce )
 {
     uint8x16_t ab = vreinterpretq_u8_p8(vmulq_p8(vreinterpretq_p8_u8(a0) , vreinterpretq_p8_u8(b0)));
     return ab^vqtbl1q_u8( tab_reduce , vshrq_n_u8(ab,4) );
 }
 
 static inline
-uint8x16_t _gf16v_get_multab_neon( uint8x16_t b , uint8x16_t tab_reduce , uint8x16_t tab_0_f ) { return _gf16v_mul_unpack_neon(b,tab_0_f,tab_reduce); }
+uint8x16_t _gf16v_get_multab( uint8x16_t b , uint8x16_t tab_reduce , uint8x16_t tab_0_f ) { return _gf16v_mul_unpack(b,tab_0_f,tab_reduce); }
 
 static inline
-uint8x16_t gf16v_get_multab_neon( uint8_t b )
+uint8x16_t gf16v_get_multab( uint8_t b )
 {
     uint8x16_t tab_reduce = vld1q_u8(__gf16_reduce);
     uint8x16_t tab_0_f = vld1q_u8(__0_f);
 
     uint8x16_t bb = vdupq_n_u8(b);
-    return _gf16v_get_multab_neon(bb,tab_reduce,tab_0_f);
+    return _gf16v_get_multab(bb,tab_reduce,tab_0_f);
 }
 
+#define O_NEON_ROUND_UP_ ((O_MAX + 1)/2*2)
+
 static
-inline void mayo_O_multabs_neon(const unsigned char *O, uint8x16_t *O_multabs){
+inline void mayo_O_multabs(const unsigned char *O, uint8x16_t *O_multabs){
     // build multiplication tables
     for (size_t r = 0; r < V_MAX; r++)
     {
-        for (size_t c = 0; c < O_MAX; c+=2)
+        size_t c = 0;
+        for (; c + 1 < O_MAX; c+=2)
         {
-            O_multabs[O_MAX/2*r + c/2] = gf16v_get_multab_neon(O[O_MAX*r + c]) ^ (gf16v_get_multab_neon(O[O_MAX*r + c + 1]) << 4);
+            O_multabs[O_NEON_ROUND_UP_/2*r + c/2] = gf16v_get_multab(O[O_MAX*r + c]) ^ (gf16v_get_multab(O[O_MAX*r + c + 1]) << 4);
         }
+#if O_MAX % 2 == 1
+        {
+            O_multabs[O_NEON_ROUND_UP_/2*r + c/2] = gf16v_get_multab(O[O_MAX*r + c]);
+        }
+#endif
     }
 }
 
 static
-inline void mayo_V_multabs_neon(const unsigned char *V, uint8x16_t *V_multabs){
+inline void mayo_V_multabs(const unsigned char *V, uint8x16_t *V_multabs){
     // build multiplication tables
     size_t r;
     for (size_t c = 0; c < V_MAX; c++)
     {
         for (r = 0; r+1 < K_MAX; r+= 2)
         {
-            V_multabs[K_OVER_2*c +  r/2] = gf16v_get_multab_neon(V[V_MAX*r + c]) ^ (gf16v_get_multab_neon(V[V_MAX*(r+1) + c]) << 4);
+            V_multabs[K_OVER_2*c +  r/2] = gf16v_get_multab(V[V_MAX*r + c]) ^ (gf16v_get_multab(V[V_MAX*(r+1) + c]) << 4);
         }
 #if K_MAX % 2 == 1
-        V_multabs[K_OVER_2*c + r/2] = gf16v_get_multab_neon(V[V_MAX*r + c]);
+        V_multabs[K_OVER_2*c + r/2] = gf16v_get_multab(V[V_MAX*r + c]);
 #endif
     }
 }
@@ -91,7 +96,7 @@ static const unsigned char mayo_gf16_mul[256] __attribute__((aligned(32))) = {
 };
 
 static
-inline void mayo_S1_multabs_neon(const unsigned char *S1, uint8x16_t *S1_multabs) {
+inline void mayo_S1_multabs(const unsigned char *S1, uint8x16_t *S1_multabs) {
     size_t r;
     for (size_t c = 0; c < V_MAX; c++)
     {
@@ -107,7 +112,7 @@ inline void mayo_S1_multabs_neon(const unsigned char *S1, uint8x16_t *S1_multabs
 }
 
 static
-inline void mayo_S2_multabs_neon(const unsigned char *S2, uint8x16_t *S2_multabs) {
+inline void mayo_S2_multabs(const unsigned char *S2, uint8x16_t *S2_multabs) {
     // build multiplication tables
     size_t r;
     for (size_t c = 0; c < O_MAX; c++)

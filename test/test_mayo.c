@@ -46,6 +46,10 @@ static int test_mayo(const mayo_params_t *p) {
     unsigned char *sig = (unsigned char *) ((uintptr_t)_sig | (uintptr_t)1);
     unsigned char *msg = (unsigned char *) ((uintptr_t)_msg | (uintptr_t)1);
 
+    for (int i = 0; i < 32; i++) {
+        msg[i] = i;
+    }
+
     unsigned char seed[48] = { 0 };
     size_t msglen = 32;
 
@@ -56,6 +60,7 @@ static int test_mayo(const mayo_params_t *p) {
     int res = mayo_keypair(p, pk, sk);
     if (res != MAYO_OK) {
         res = -1;
+        printf("keygen failed!\n");
         goto err;
     }
 
@@ -68,6 +73,7 @@ static int test_mayo(const mayo_params_t *p) {
     res = mayo_sign(p, sig, &smlen, msg, 32, sk);
     if (res != MAYO_OK) {
         res = -1;
+        printf("sign failed!\n");
         goto err;
     }
 
@@ -85,13 +91,17 @@ static int test_mayo(const mayo_params_t *p) {
     res = mayo_open(p, msg, &msglen, sig, smlen, pk);
     if (res != MAYO_OK) {
         res = -1;
+        printf("verify failed!\n");
         goto err;
     }
+
+    printf("verify success!\n");
 
     sig[0] = ~sig[0];
     res = mayo_open(p, msg, &msglen, sig, smlen, pk);
     if (res != MAYO_ERR) {
         res = -1;
+        printf("wrong signature still verified!\n");
         goto err;
     } else {
         res = MAYO_OK;
@@ -113,9 +123,12 @@ int main(int argc, char *argv[]) {
         rc = test_mayo(&MAYO_3);
     } else if (!strcmp(argv[1], "MAYO-5")) {
         rc = test_mayo(&MAYO_5);
+    } else {
+        printf("unknown parameter set\n");
+        return MAYO_ERR;
     }
 #else
-    rc = test_mayo(0);
+    rc = test_mayo(NULL);
 #endif
 
     if (rc != MAYO_OK) {

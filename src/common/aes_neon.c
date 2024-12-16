@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT and Public Domain
+
 #ifdef ENABLE_AESNEON
 
 // Code taken from https://github.com/ChristerKnorborg/post-quantum-signature-schemes/blob/main/src/genkat/aes_arm.c

@@ -11,14 +11,14 @@ MAYO-C is a C library implementation of [MAYO](https://pqmayo.org), a multivaria
 
 | Parameter Set | NIST Security Level | n | m | o | k | q | sk size | pk size | sig size |
 | --- | ---- | -- | -- | -- | -- | -- | -- | -- | -- |
-| MAYO_1 | 1 | 66 | 64 | 8 | 9 | 16 | 24 B | 1168 B | 321 B |
-| MAYO_2 | 1 | 78 | 64 | 18 | 4 | 16 | 24 B | 5488 B | 180 B |
-| MAYO_3 | 3 | 99 | 96 | 10 | 11 | 16 | 32 B | 2656 B | 577 B |
-| MAYO_5 | 5 | 133 | 128 | 12 | 12 | 16 | 40 B | 5008 B | 838 B |
+| MAYO_1 | 1 | 86 | 78 | 8 | 10 | 16 | 24 B | 1420 B | 454 B |
+| MAYO_2 | 1 | 81 | 64 | 17 | 4 | 16 | 24 B | 4912 B | 186 B |
+| MAYO_3 | 3 | 118 | 108 | 10 | 11 | 16 | 32 B | 2986 B | 681 B |
+| MAYO_5 | 5 | 154 | 142 | 12 | 12 | 16 | 40 B | 5554 B | 964 B |
 
 ## Requirements
 
-- CMake (version 3.5 or later)
+- CMake (version 3.10 or later)
 - C99-compatible compiler
 - Valgrind (for dynamic testing)
 - Clang static analyzer (version 10 or later, for static analysis)
@@ -36,8 +36,8 @@ The following build options have been used to report performance numbers in the 
 2. Optimized (AES-NI enabled): `cmake -DMAYO_BUILD_TYPE=opt -DENABLE_AESNI=ON ..`
 3. Optimized (AES-NI disabled): `cmake -DMAYO_BUILD_TYPE=opt -DENABLE_AESNI=OFF ..`
 4. AVX2: `cmake -DMAYO_BUILD_TYPE=avx2 -DENABLE_AESNI=ON ..`
-5. A64 M1 NEON: `cmake -DMAYO_BUILD_TYPE=neon -DENABLE_AESNI=ON ..`
-6. A64 RPi4 Cortex-A72 NEON: `cmake -DMAYO_BUILD_TYPE=neon -DENABLE_AESNI=OFF ..`
+5. A64 M1 NEON: `cmake -DMAYO_BUILD_TYPE=neon -DENABLE_AESNEON=ON ..`
+6. A64 RPi4 Cortex-A72 NEON: `cmake -DMAYO_BUILD_TYPE=neon -DENABLE_AESNEON=OFF ..`
 
 ## Build options
 
@@ -164,7 +164,7 @@ Third party code is used in some test and common code files:
 - `common/fips202.c`: Public Domain
 - `common/randombytes_system.c`: MIT: Copyright (c) 2017 Daan Sprenkels <hello@dsprenkels.com>
 - `apps/PQCgenKAT_sign.c`, `common/randombytes_ctrdrbg.c`, `test/test_kat.c`: by NIST (Public Domain)
-- `test/m1cycles.{c,h}`, Apache 2.0 or Public Domain
+- `test/m1cycles.{c,h}`, Apache 2.0 and Public Domain
 
 See also the SPDX License Identifiers in the respective files.
 
