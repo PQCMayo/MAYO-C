@@ -241,6 +241,12 @@ static void compute_A(const mayo_params_t *p, uint64_t *VtL, unsigned char *A_ou
         }
     }
 
+#ifdef TARGET_BIG_ENDIAN
+    for (int i = 0; i < (((PARAM_o(p)*PARAM_k(p)+15)/16)*16)*MAYO_M_OVER_8; ++i) 
+        A[i] = BSWAP64(A[i]);
+#endif
+
+
     for (int r = 0; r < PARAM_m(p); r+=16)
     {
         for (int c = 0; c < PARAM_A_cols(p)-1 ; c+=16)
@@ -313,10 +319,6 @@ int mayo_expand_sk(const mayo_params_t *p, const unsigned char *csk,
     const int param_O_bytes = PARAM_O_bytes(p);
     const int param_pk_seed_bytes = PARAM_pk_seed_bytes(p);
     const int param_sk_seed_bytes = PARAM_sk_seed_bytes(p);
-#ifdef TARGET_BIG_ENDIAN
-    const int param_P1_bytes = PARAM_P1_bytes(p);
-    const int param_P2_bytes = PARAM_P2_bytes(p);
-#endif
 
     const unsigned char *seed_sk = csk;
     unsigned char *seed_pk = S;
@@ -330,13 +332,13 @@ int mayo_expand_sk(const mayo_params_t *p, const unsigned char *csk,
 #endif
 
     expand_P1_P2(p, P, seed_pk);
-    uint64_t *P2 = P + PARAM_P1_limbs(p);
-
 #ifdef TARGET_BIG_ENDIAN
-    for (int i = 0; i < (param_P1_bytes + param_P2_bytes) / 8; ++i) {
+    for (int i = 0; i < PARAM_P1_limbs(p) + PARAM_P2_limbs(p); ++i) {
         P[i] = BSWAP64(P[i]);
     }
 #endif
+
+    uint64_t *P2 = P + PARAM_P1_limbs(p);
 
     uint64_t *P1 = P;
 
@@ -345,7 +347,7 @@ int mayo_expand_sk(const mayo_params_t *p, const unsigned char *csk,
     P1P1t_times_O(p, P1, O, L);
 
 #ifdef TARGET_BIG_ENDIAN
-    for (int i = 0; i < (param_P1_bytes + param_P2_bytes) / 8; ++i) {
+    for (int i = 0; i < PARAM_P1_limbs(p) + PARAM_P2_limbs(p); ++i) {
         P[i] = BSWAP64(P[i]);
     }
 #endif
@@ -386,10 +388,6 @@ int mayo_sign_signature(const mayo_params_t *p, unsigned char *sig,
     const int param_digest_bytes = PARAM_digest_bytes(p);
     const int param_sk_seed_bytes = PARAM_sk_seed_bytes(p);
     const int param_salt_bytes = PARAM_salt_bytes(p);
-#ifdef TARGET_BIG_ENDIAN
-    const int param_P1_bytes = PARAM_P1_bytes(p);
-    const int param_P2_bytes = PARAM_P2_bytes(p);
-#endif
 
     ret = mayo_expand_sk(p, csk, &sk);
     if (ret != MAYO_OK) {
@@ -409,10 +407,10 @@ int mayo_sign_signature(const mayo_params_t *p, unsigned char *sig,
 
 
 #ifdef TARGET_BIG_ENDIAN
-    for (int i = 0; i < param_P1_bytes / 8; ++i) {
+    for (int i = 0; i < PARAM_P1_limbs(p); ++i) {
         P1[i] = BSWAP64(P1[i]);
     }
-    for (int i = 0; i < param_P2_bytes / 8; ++i) {
+    for (int i = 0; i < PARAM_P2_limbs(p); ++i) {
         L[i] = BSWAP64(L[i]);
     }
 #endif
@@ -631,9 +629,6 @@ int mayo_verify(const mayo_params_t *p, const unsigned char *m,
     const int param_n = PARAM_n(p);
     const int param_k = PARAM_k(p);
     const int param_m_bytes = PARAM_m_bytes(p);
-#ifdef TARGET_BIG_ENDIAN
-    const int param_P3_bytes = PARAM_P3_bytes(p);
-#endif
     const int param_sig_bytes = PARAM_sig_bytes(p);
     const int param_digest_bytes = PARAM_digest_bytes(p);
     const int param_salt_bytes = PARAM_salt_bytes(p);
@@ -648,13 +643,13 @@ int mayo_verify(const mayo_params_t *p, const unsigned char *m,
     uint64_t *P3 = P2 + PARAM_P2_limbs(p);
 
 #ifdef TARGET_BIG_ENDIAN
-    for (int i = 0; i < param_P1_bytes / 8; ++i) {
+    for (int i = 0; i < PARAM_P1_limbs(p); ++i) {
         P1[i] = BSWAP64(P1[i]);
     }
-    for (int i = 0; i < param_P2_bytes / 8; ++i) {
+    for (int i = 0; i < PARAM_P2_limbs(p); ++i) {
         P2[i] = BSWAP64(P2[i]);
     }
-    for (int i = 0; i < param_P3_bytes / 8; ++i) {
+    for (int i = 0; i < PARAM_P3_limbs(p); ++i) {
         P3[i] = BSWAP64(P3[i]);
     }
 #endif

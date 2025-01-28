@@ -10,7 +10,9 @@
 #include <stddef.h>
 
 #if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#ifndef TARGET_BIG_ENDIAN
 #define TARGET_BIG_ENDIAN
+#endif
 #endif
 
 #if defined(MAYO_AVX) || defined(MAYO_NEON)

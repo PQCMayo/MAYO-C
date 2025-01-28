@@ -55,7 +55,6 @@ end:
     return rc;
 }
 
-
 static int test_sig_kat(const mayo_params_t *p) {
     unsigned char       seed[48];
     unsigned char       *m, *sm, *m1, *sm_rsp;
