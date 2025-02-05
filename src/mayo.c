@@ -507,12 +507,14 @@ int mayo_sign(const mayo_params_t *p, unsigned char *sm,
               size_t mlen, const unsigned char *csk) {
     int ret = MAYO_OK;
     const int param_sig_bytes = PARAM_sig_bytes(p);
-    size_t siglen = param_sig_bytes;
-    ret = mayo_sign_signature(p, sm, &siglen, m, mlen, csk);
-    if (ret != MAYO_OK || siglen != (size_t) param_sig_bytes)
-        goto err;
-
+    size_t siglen;
     memmove(sm + param_sig_bytes, m, mlen);
+    ret = mayo_sign_signature(p, sm, &siglen, sm + param_sig_bytes, mlen, csk);
+    if (ret != MAYO_OK || siglen != (size_t) param_sig_bytes){
+        memset(sm, 0, siglen + mlen);
+        goto err;
+    }
+
     *smlen = siglen + mlen;
 err:
     return ret;
