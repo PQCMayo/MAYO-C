@@ -24,21 +24,21 @@
  */
 static int example_mayo(const mayo_params_t* p) {
 
-    unsigned long long msglen = 32;
-    unsigned long long smlen = p->sig_bytes + msglen;
+    size_t msglen = 32;
+    size_t smlen = PARAM_sig_bytes(p) + msglen;
 
-    unsigned char *pk  = calloc(p->cpk_bytes, 1);
-    unsigned char *sk  = calloc(p->csk_bytes, 1);
+    unsigned char *pk  = calloc(PARAM_cpk_bytes(p), 1);
+    unsigned char *sk  = calloc(PARAM_csk_bytes(p), 1);
 
-    unsigned char *epk = calloc(p->epk_bytes, 1);
+    uint64_t *epk = calloc(1, sizeof(pk_t));
     sk_t *esk = calloc(1, sizeof(sk_t));
 
-    unsigned char *sig = calloc(p->sig_bytes + msglen, 1);
+    unsigned char *sig = calloc(PARAM_sig_bytes(p) + msglen, 1);
 
     unsigned char msg[32] = { 0xe };
     unsigned char msg2[32] = { 0 };
 
-    printf("Example with %s\n", p->name);
+    printf("Example with %s\n", PARAM_name(p));
 
     printf("mayo_keypair -> ");
     int res = mayo_keypair(p, pk, sk);
@@ -129,8 +129,8 @@ static int example_mayo(const mayo_params_t* p) {
 err:
     free(pk);
     free(epk);
-    mayo_secure_free(sk, p->csk_bytes);
-    free(esk);
+    mayo_secure_free(sk, PARAM_csk_bytes(p));
+    mayo_secure_free(esk, sizeof(sk_t));
     free(sig);
     return res;
 }
@@ -145,6 +145,7 @@ int main(void) {
         }
     }
 #else
-    return example_mayo(&MAYO_VARIANT);
+    return example_mayo(0);
 #endif
 }
+

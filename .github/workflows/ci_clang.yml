@@ -1,0 +1,61 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CT-tests (clang, clang-14 and clang-18)
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "github" branch
+  push:
+    branches: [ '*' ]
+  pull_request:
+    branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  ct:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    strategy:
+        matrix:
+          clang_config: [CTOS, CTO0, CTO2, CTO3, CTOSNOVEC, CTO0NOVEC, CTO2NOVEC, CTO3NOVEC]
+          # Note: valgrind seems buggy with CT01 and CT01NOVEC, we skip them
+          clang_version: [clang, clang-15, clang-18]
+          mayo_build_type: [ref, opt, avx2]
+  
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && wget https://apt.llvm.org/llvm.sh && sudo bash ./llvm.sh 18 && sudo apt update && sudo apt -y install build-essential valgrind cmake libboost-tools-dev libpthread-stubs0-dev libssl-dev clang-15 clang-18 clang gcc gcc-12
+
+      - name: CT-Test (clang)
+        run: |
+            ldd --version
+            rm -rf build && mkdir build && cd build && cmake -DENABLE_CT_TESTING=ON -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DCMAKE_C_COMPILER=${{ matrix.clang_version }} -DCMAKE_BUILD_TYPE=${{ matrix.clang_config }} -DMAYO_MARCH="-march=haswell -maes" .. && make -j
+            valgrind --max-stackframe=3190968 --tool=memcheck --error-exitcode=1 --track-origins=yes test/mayo_test_scheme_MAYO_1
+            valgrind --max-stackframe=3190968 --tool=memcheck --error-exitcode=1 --track-origins=yes test/mayo_test_scheme_MAYO_2
+            valgrind --max-stackframe=3190968 --tool=memcheck --error-exitcode=1 --track-origins=yes test/mayo_test_scheme_MAYO_3
+            valgrind --max-stackframe=3190968 --tool=memcheck --error-exitcode=1 --track-origins=yes test/mayo_test_scheme_MAYO_5
+            cd ..
+        if: (matrix.mayo_build_type == 'opt' || matrix.mayo_build_type == 'avx2') && !(matrix.clang_config == 'CTO3' && matrix.mayo_build_type == 'opt')
+
+      - name: CT-Test (clang)
+        run: |
+            ldd --version
+            rm -rf build && mkdir build && cd build && cmake -DENABLE_CT_TESTING=ON -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DCMAKE_C_COMPILER=${{ matrix.clang_version }} -DCMAKE_BUILD_TYPE=${{ matrix.clang_config }} -DMAYO_MARCH="-march=haswell -maes" .. && make -j
+            valgrind --max-stackframe=3190968 --tool=memcheck --error-exitcode=1 --track-origins=yes test/mayo_test_scheme MAYO-1
+            valgrind --max-stackframe=3190968 --tool=memcheck --error-exitcode=1 --track-origins=yes test/mayo_test_scheme MAYO-2
+            valgrind --max-stackframe=3190968 --tool=memcheck --error-exitcode=1 --track-origins=yes test/mayo_test_scheme MAYO-3
+            valgrind --max-stackframe=3190968 --tool=memcheck --error-exitcode=1 --track-origins=yes test/mayo_test_scheme MAYO-5
+            cd ..
+        if: matrix.mayo_build_type == 'ref'

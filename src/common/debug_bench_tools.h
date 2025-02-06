@@ -34,4 +34,36 @@ static inline int64_t cpucycles(void) {
 #define TOC(name)
 #endif
 
+#ifdef MAYO_AVX
+
+#include <immintrin.h>
+
+static inline void print_avx2(__m256i a){
+    unsigned char *temp = (unsigned char*) &a;
+    for (size_t i = 0; i < 32; i++)
+    {
+        printf("%X", temp[i] & 0xf);
+        printf("%X", temp[i] >> 4);
+        if(i%4 == 3){
+            printf(" ");
+        }
+    }
+    printf("\n");
+}
+
+static inline void print_avx2_(__m256i a){
+    unsigned char *temp = (unsigned char*) &a;
+    for (size_t i = 0; i < 32; i++)
+    {
+        printf("%X", temp[i] & 0xf);
+        printf("%X", temp[i] >> 4);
+        if(i%4 == 3){
+            printf(" ");
+        }
+    }
+}
+
 #endif
+
+#endif
+

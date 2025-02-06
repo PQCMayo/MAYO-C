@@ -31,7 +31,7 @@ THE SOFTWARE.
 # define _GNU_SOURCE
 #endif /* defined(__linux__) || defined(__GNU__) */
 
-#include <rng.h>
+#include <randombytes.h>
 
 #if defined(_WIN32)
 /* Windows */
@@ -380,7 +380,7 @@ static int randombytes_select(void *buf, size_t n)
 #endif
 }
 
-int randombytes(unsigned char *x, unsigned long long xlen) {
+int randombytes(unsigned char *x, size_t xlen) {
 
     int ret = randombytes_select(x, (size_t) xlen);
 #ifdef ENABLE_CT_TESTING
@@ -396,3 +396,4 @@ void randombytes_init(unsigned char *entropy_input,
     (void) personalization_string;
     (void) security_strength;
 }
+

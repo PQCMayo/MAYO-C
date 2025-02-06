@@ -12,7 +12,7 @@ env:
 
 jobs:
   build_test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         mayo_build_type: [ref, opt, avx2]
@@ -20,7 +20,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python 3.10
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v5
       with:
         python-version: "3.10"
 
@@ -29,7 +29,7 @@ jobs:
 
     - name: Install Valgrind
       run: |
-          sudo apt install valgrind
+          sudo apt-get update && sudo apt install valgrind
           echo "Valgrind installed"
 
     - name: Install Valgrind dependencies
@@ -103,10 +103,10 @@ jobs:
           rm -rf build
           cmake -Bbuild -DENABLE_CT_TESTING=ON -DCMAKE_BUILD_TYPE=Debug -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DMAYO_MARCH="-march=haswell -maes"
           cmake --build build
-          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO_1
-          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO_2
-          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO_3
-          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO_5
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO-1
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO-2
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO-3
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO-5
       if: matrix.mayo_build_type == 'ref'
 
     - name: Memcheck
@@ -114,10 +114,10 @@ jobs:
           rm -rf build
           cmake -Bbuild -DCMAKE_BUILD_TYPE=Debug -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DMAYO_MARCH="-march=haswell -maes"
           cmake --build build
-          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO_1
-          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO_2
-          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO_3
-          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO_5
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO-1
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO-2
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO-3
+          valgrind --error-exitcode=1 --track-origins=yes build/test/mayo_test_scheme MAYO-5
       if: matrix.mayo_build_type == 'ref'
 
     - name: Memcheck
@@ -136,25 +136,25 @@ jobs:
           rm -rf build
           cmake -Bbuild -DCMAKE_BUILD_TYPE=ASAN -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DCMAKE_C_COMPILER=clang
           cmake --build build
-          ctest -VV --test-dir build
+          ctest -V --test-dir build
 
     - name: Memory Sanitizer MSAN
       run: |
           rm -rf build
           cmake -Bbuild -DCMAKE_BUILD_TYPE=MSAN -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DCMAKE_C_COMPILER=clang
           cmake --build build
-          ctest -VV --test-dir build
+          ctest -V --test-dir build
 
     - name: Leak Sanitizer LSAN
       run: |
           rm -rf build
           cmake -Bbuild -DCMAKE_BUILD_TYPE=LSAN -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DCMAKE_C_COMPILER=clang
           cmake --build build
-          ctest -VV --test-dir build
+          ctest -V --test-dir build
 
     - name: Undefined Behavior Sanitizer UBSAN
       run: |
           rm -rf build
           cmake -Bbuild -DCMAKE_BUILD_TYPE=UBSAN -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }} -DCMAKE_C_COMPILER=clang
           cmake --build build
-          ctest -VV --test-dir build
+          ctest -V --test-dir build

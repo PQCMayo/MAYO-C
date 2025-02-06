@@ -16,8 +16,17 @@ int AES_128_CTR_4R_NI(unsigned char *output, size_t outputByteLen,
                       const unsigned char *input, size_t inputByteLen);
 #define AES_128_CTR AES_128_CTR_NI
 #else
+#ifdef ENABLE_AESNEON
+int AES_128_CTR_NEON(unsigned char *output, size_t outputByteLen,
+                   const unsigned char *input, size_t inputByteLen);
+int AES_128_CTR_4R_NI(unsigned char *output, size_t outputByteLen,
+                      const unsigned char *input, size_t inputByteLen);
+#define AES_128_CTR AES_128_CTR_NEON
+#else
 int AES_128_CTR(unsigned char *output, size_t outputByteLen,
                 const unsigned char *input, size_t inputByteLen);
 #endif
+#endif
 
 #endif
+

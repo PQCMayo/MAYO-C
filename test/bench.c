@@ -6,14 +6,11 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+#include "m1cycles.h"
 
-#if defined(TARGET_OS_UNIX) && (defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_OTHER))
+#if (defined(TARGET_OS_UNIX) && (defined(TARGET_ARM) || defined(TARGET_ARM64)) || defined(TARGET_OTHER)) \
+    || (!defined(TARGET_OS_MAC) && defined(TARGET_ARM64))
 #include <time.h>
-#endif
-#if (defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_S390X) || defined(TARGET_OTHER))
-#define print_unit printf("nsec\n");
-#else
-#define print_unit printf("cycles\n");
 #endif
 
 static int bench_sig(const mayo_params_t *p, int runs, int csv);
@@ -22,6 +19,10 @@ static inline int64_t cpucycles(void);
 int main(int argc, char *argv[]) {
     int rc = 0;
 
+#if defined(TARGET_OS_MAC) && defined(TARGET_ARM64)
+    setup_rdtsc();
+#endif
+
 #ifdef ENABLE_PARAMS_DYNAMIC
     if (argc < 3) {
         printf("Two arguments needed\n");
@@ -29,13 +30,13 @@ int main(int argc, char *argv[]) {
         goto end;
     }
     int runs = atoi(argv[2]);
-    if (!strcmp(argv[1], "MAYO_1")) {
+    if (!strcmp(argv[1], "MAYO-1")) {
         rc = bench_sig(&MAYO_1, runs, 0);
-    } else if (!strcmp(argv[1], "MAYO_2")) {
+    } else if (!strcmp(argv[1], "MAYO-2")) {
         rc = bench_sig(&MAYO_2, runs, 0);
-    } else if (!strcmp(argv[1], "MAYO_3")) {
+    } else if (!strcmp(argv[1], "MAYO-3")) {
         rc = bench_sig(&MAYO_3, runs, 0);
-    } else if (!strcmp(argv[1], "MAYO_5")) {
+    } else if (!strcmp(argv[1], "MAYO-5")) {
         rc = bench_sig(&MAYO_5, runs, 0);
     }
 #else
@@ -45,7 +46,7 @@ int main(int argc, char *argv[]) {
         goto end;
     }
     int runs = atoi(argv[1]);
-    rc = bench_sig(&MAYO_VARIANT, runs, 0);
+    rc = bench_sig(0, runs, 0);
 #endif
 
 
@@ -54,7 +55,7 @@ end:
     return rc;
 }
 
-#if (defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_S390X))
+#if (defined(TARGET_ARM) || defined(TARGET_S390X) || (defined(TARGET_ARM64) && defined(TARGET_OS_UNIX)))
 #define BENCH_UNITS "nsec"
 #else
 #define BENCH_UNITS "cycles"
@@ -96,18 +97,18 @@ static int bench_sig(const mayo_params_t *p, int runs, int csv) {
 
     const int m_len = 32;
 
-    unsigned char *pk  = calloc(p->cpk_bytes, 1);
-    unsigned char *epk  = calloc(p->epk_bytes, 1);
-    unsigned char *sk  = calloc(p->csk_bytes, 1);
-    sk_t *esk  = (sk_t *)calloc(1, sizeof(sk_t));
-    unsigned char *sig = calloc(p->sig_bytes + m_len, 1);
+    unsigned char *pk  = calloc(PARAM_cpk_bytes(p), 1);
+    uint64_t *epk  = calloc(1, sizeof(pk_t));
+    unsigned char *sk  = calloc(PARAM_csk_bytes(p), 1);
+    sk_t *esk  = calloc(1, sizeof(sk_t));
+    unsigned char *sig = calloc(PARAM_sig_bytes(p) + m_len, 1);
     unsigned char *m   = calloc(m_len, 1);
-    unsigned long long len = p->sig_bytes;
+    size_t len = PARAM_sig_bytes(p);
 
     if (csv) {
-        printf("%s,", p->name);
+        printf("%s,", PARAM_name(p));
     } else {
-        printf("Benchmarking %s\n", p->name);
+        printf("Benchmarking %s\n", PARAM_name(p));
     }
 
     BENCH_CODE_1(runs);
@@ -128,17 +129,17 @@ static int bench_sig(const mayo_params_t *p, int runs, int csv) {
 
     len = 32;
     BENCH_CODE_1(runs);
-    mayo_open(p, m, &len, sig, p->sig_bytes, pk);
+    mayo_open(p, m, &len, sig, PARAM_sig_bytes(p), pk);
     BENCH_CODE_2("mayo_verify", csv);
 
     if (csv) {
         printf("\n");
     }
 
+    free(esk);
+    free(epk);
     free(pk);
     free(sk);
-    free(epk);
-    free(esk);
     free(sig);
     free(m);
     return rc;
@@ -154,9 +155,12 @@ static inline int64_t cpucycles(void) {
     uint64_t tod;
     asm volatile("stckf %0\n" : "=Q" (tod) : : "cc");
     return (tod * 1000 / 4096);
+#elif (defined(TARGET_OS_MAC) && defined(TARGET_ARM64))
+    return rdtsc();
 #else
     struct timespec time;
     clock_gettime(CLOCK_REALTIME, &time);
     return (int64_t)(time.tv_sec * 1e9 + time.tv_nsec);
 #endif
 }
+

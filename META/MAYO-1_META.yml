@@ -1,0 +1,52 @@
+name: MAYO-1
+type: signature
+claimed-nist-level: 1
+length-public-key: 1420
+length-secret-key: 24
+length-signature: 454
+nistkat-sha256: 178adb997203ae0512b1bd6fa4a5cfae25805d88aeb0ce5226981423153418ee
+principal-submitters:
+  - Ward Beullens
+  - Fabio Campos
+  - Sofía Celi
+  - Basil Hess
+  - Matthias J. Kannwischer
+implementations:
+  - name: opt
+    version: round2
+    folder_name: .
+    compile_opts: -DMAYO_VARIANT=MAYO_1 -DMAYO_BUILD_TYPE_OPT -DHAVE_RANDOMBYTES_NORETVAL
+    signature_keypair: pqmayo_MAYO_1_opt_crypto_sign_keypair
+    signature_signature: pqmayo_MAYO_1_opt_crypto_sign_signature
+    signature_verify: pqmayo_MAYO_1_opt_crypto_sign_verify
+    sources: LICENSE NOTICE ./src/arithmetic.c ./src/arithmetic.h ./src/mayo.c ./src/params.c ./src/simple_arithmetic.h ./src/generic/arithmetic_dynamic.h ./src/generic/arithmetic_fixed.h ./src/generic/echelon_form.h ./src/generic/ef_inner_loop.h ./src/generic/generic_arithmetic.h ./include/mayo.h ./include/mem.h ./src/common/aes_ctr.h ./src/mayo_1/api.h ./src/mayo_1/api.c
+  - name: avx2
+    version: round2
+    folder_name: .
+    compile_opts: -DMAYO_VARIANT=MAYO_1 -DMAYO_BUILD_TYPE_AVX2 -DMAYO_AVX -DHAVE_RANDOMBYTES_NORETVAL
+    signature_keypair: pqmayo_MAYO_1_avx2_crypto_sign_keypair
+    signature_signature: pqmayo_MAYO_1_avx2_crypto_sign_signature
+    signature_verify: pqmayo_MAYO_1_avx2_crypto_sign_verify
+    sources: LICENSE NOTICE ./src/arithmetic.c ./src/arithmetic.h ./src/mayo.c ./src/params.c ./src/simple_arithmetic.h ./src/AVX2/arithmetic_common.h ./src/AVX2/echelon_form.h ./src/AVX2/echelon_form_loop.h ./src/AVX2/shuffle_arithmetic.h ./include/mayo.h ./include/mem.h ./src/common/aes_ctr.h ./src/mayo_1/api.h ./src/mayo_1/api.c
+    supported_platforms:
+      - architecture: x86_64
+        operating_systems:
+          - Darwin
+          - Linux
+        required_flags:
+          - avx2
+  - name: neon
+    version: round2
+    folder_name: .
+    compile_opts: -DMAYO_VARIANT=MAYO_1 -DMAYO_BUILD_TYPE_NEON -DMAYO_NEON -DHAVE_RANDOMBYTES_NORETVAL
+    signature_keypair: pqmayo_MAYO_1_neon_crypto_sign_keypair
+    signature_signature: pqmayo_MAYO_1_neon_crypto_sign_signature
+    signature_verify: pqmayo_MAYO_1_neon_crypto_sign_verify
+    sources: LICENSE NOTICE ./src/arithmetic.c ./src/arithmetic.h ./src/mayo.c ./src/params.c ./src/simple_arithmetic.h ./src/neon/arithmetic_common.h ./src/neon/echelon_form.h ./src/neon/echelon_form_loop.h ./src/neon/shuffle_arithmetic.h ./include/mayo.h ./include/mem.h ./src/common/aes_ctr.h ./src/mayo_1/api.h ./src/mayo_1/api.c
+    supported_platforms:
+      - architecture: arm_8
+        operating_systems:
+          - Darwin
+          - Linux
+        required_flags:
+          - asimd

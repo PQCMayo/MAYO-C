@@ -7,81 +7,67 @@
 #include <stdalign.h>
 #include <stdint.h>
 #include <mem.h>
+#include <arithmetic.h>
 
 #define MAYO_MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MAYO_MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 static inline unsigned char
-bitsliced_m_extract_element(int m_legs, const uint32_t *in, int index) {
-    const uint32_t *in0 = in;
-    const uint32_t *in1 = in + m_legs;
-    const uint32_t *in2 = in + 2 * m_legs;
-    const uint32_t *in3 = in + 3 * m_legs;
-    const int leg = index / 32;
-    // element order is 0, 8, 16, 24, 1, 9, 17, 25, 2, 10, 18, 26, ...
-    const int shift = ((index & 0x7) << 2) + ((index & 0x18) >> 3);
+m_extract_element(const uint64_t *in, int index) {
+    const int leg = index / 16;
+    const int offset = index % 16;
 
-    return ((in0[leg] >> shift) & 1) ^ (((in1[leg] >> shift) & 1) << 1) ^
-           (((in2[leg] >> shift) & 1) << 2) ^ (((in3[leg] >> shift) & 1) << 3);
+    return (in[leg] >> (offset*4)) & 0xF;
 }
 
 static inline void
-ef_bitslice_m_vec(int m_legs, const unsigned char *in, uint32_t *out) {
-    uint32_t *out0 = out;
-    uint32_t *out1 = out + m_legs;
-    uint32_t *out2 = out + 2 * m_legs;
-    uint32_t *out3 = out + 3 * m_legs;
-
-
-    uint32_t in32[4];
-    for (int leg = 0; leg < m_legs; leg++) {
-        for(int i = 0; i < 4; i++) {
-            in32[i] = (in[32*leg + i*8 + 0] <<  0) ^ (in[32*leg + i*8 + 1] <<  4) ^ (in[32*leg + i*8 + 2] <<  8) ^ (in[32*leg + i*8 + 3] << 12) ^
-                      (in[32*leg + i*8 + 4] << 16) ^ (in[32*leg + i*8 + 5] << 20) ^ (in[32*leg + i*8 + 6] << 24) ^ (in[32*leg + i*8 + 7] << 28);
-        }
-        out0[leg] = ((in32[0] & 0x11111111) >> 0) ^ ((in32[1] & 0x11111111) << 1) ^ ((in32[2] & 0x11111111) << 2) ^ ((in32[3] & 0x11111111) << 3);
-        out1[leg] = ((in32[0] & 0x22222222) >> 1) ^ ((in32[1] & 0x22222222) >> 0) ^ ((in32[2] & 0x22222222) << 1) ^ ((in32[3] & 0x22222222) << 2);
-        out2[leg] = ((in32[0] & 0x44444444) >> 2) ^ ((in32[1] & 0x44444444) >> 1) ^ ((in32[2] & 0x44444444) >> 0) ^ ((in32[3] & 0x44444444) << 1);
-        out3[leg] = ((in32[0] & 0x88888888) >> 3) ^ ((in32[1] & 0x88888888) >> 2) ^ ((in32[2] & 0x88888888) >> 1) ^ ((in32[3] & 0x88888888) >> 0);
+ef_pack_m_vec(const unsigned char *in, uint64_t *out, int ncols) {
+    int i;
+    unsigned char *out8 = (unsigned char *)out;
+    for(i = 0; i+1 < ncols; i += 2){
+#ifdef TARGET_BIG_ENDIAN
+        out8[(((i/2 + 8) / 8) * 8) - 1 - (i/2)%8]  = (in[i+0] << 0) | (in[i+1] << 4);
+#else
+        out8[i/2]  = (in[i+0] << 0) | (in[i+1] << 4);
+#endif
+    }
+    if (ncols % 2 == 1){
+#ifdef TARGET_BIG_ENDIAN
+        out8[(((i/2 + 8) / 8) * 8) - 1 - (i/2)%8]  = (in[i+0] << 0);
+#else
+        out8[i/2]  = (in[i+0] << 0);
+#endif
     }
 }
+
 static inline void
-ef_unbitslice_m_vec(int m_legs, const uint32_t *in, unsigned char *out) {
-    const uint32_t *in0 = in;
-    const uint32_t *in1 = in + m_legs;
-    const uint32_t *in2 = in + 2 * m_legs;
-    const uint32_t *in3 = in + 3 * m_legs;
-
-    uint32_t out32[4];
-    for (int leg = 0; leg < m_legs; leg ++) {
-        out32[0] = ((in0[leg] & 0x11111111) >> 0) ^ ((in1[leg] & 0x11111111) << 1) ^ ((in2[leg] & 0x11111111) << 2) ^ ((in3[leg] & 0x11111111) << 3);
-        out32[1] = ((in0[leg] & 0x22222222) >> 1) ^ ((in1[leg] & 0x22222222) >> 0) ^ ((in2[leg] & 0x22222222) << 1) ^ ((in3[leg] & 0x22222222) << 2);
-        out32[2] = ((in0[leg] & 0x44444444) >> 2) ^ ((in1[leg] & 0x44444444) >> 1) ^ ((in2[leg] & 0x44444444) >> 0) ^ ((in3[leg] & 0x44444444) << 1);
-        out32[3] = ((in0[leg] & 0x88888888) >> 3) ^ ((in1[leg] & 0x88888888) >> 2) ^ ((in2[leg] & 0x88888888) >> 1) ^ ((in3[leg] & 0x88888888) >> 0);
-
-
-        for(int i = 0; i < 8; i++) {
-            out[32*leg + 0*8 + i] = (out32[0] >> (i*4)) & 0xF;
-            out[32*leg + 1*8 + i] = (out32[1] >> (i*4)) & 0xF;
-            out[32*leg + 2*8 + i] = (out32[2] >> (i*4)) & 0xF;
-            out[32*leg + 3*8 + i] = (out32[3] >> (i*4)) & 0xF;
-        }
+ef_unpack_m_vec(int legs, const uint64_t *in, unsigned char *out) {
+    const unsigned char *in8 = (const unsigned char *)in;
+    for(int i = 0; i < legs * 16; i += 2){
+#ifdef TARGET_BIG_ENDIAN
+        out[i]   = (in8[(((i/2 + 8) / 8) * 8) - 1 - (i/2)%8]) & 0xF;
+        out[i+1] = (in8[(((i/2 + 8) / 8) * 8) - 1 - (i/2)%8] >> 4);
+#else
+        out[i]   = (in8[i/2]) & 0xF;
+        out[i+1] = (in8[i/2] >> 4);
+#endif
     }
 }
+
 
 // put matrix in row echelon form with ones on first nonzero entries *in
 // constant time*
 static inline void EF(unsigned char *A, int nrows, int ncols) {
 
-    alignas (32) uint32_t _pivot_row[(K_MAX * O_MAX + 1 + 31) / 32 * 4];
-    alignas (32) uint32_t _pivot_row2[(K_MAX * O_MAX + 1 + 31) / 32 * 4];
-    alignas (32) uint32_t bitsliced_A[((K_MAX * O_MAX + 1 + 31) / 32) * 4 * M_MAX];
+    alignas (32) uint64_t _pivot_row[(K_MAX * O_MAX + 1 + 15) / 16];
+    alignas (32) uint64_t _pivot_row2[(K_MAX * O_MAX + 1 + 15) / 16];
+    alignas (32) uint64_t packed_A[((K_MAX * O_MAX + 1 + 15) / 16) * M_MAX] = {0};
 
-    int legs = (ncols + 31) / 32;
+    int row_len = (ncols + 15) / 16;
 
-    // bitslice the matrix A
+    // nibbleslice the matrix A
     for (int i = 0; i < nrows; i++) {
-        ef_bitslice_m_vec(legs, A + i * ncols, bitsliced_A + i * legs * 4);
+        ef_pack_m_vec(A + i * ncols, packed_A + i * row_len, ncols);
     }
 
     // pivot row is secret, pivot col is not
@@ -96,84 +82,71 @@ static inline void EF(unsigned char *A, int nrows, int ncols) {
         // A has full rank
 
         // zero out pivot row
-        for (int i = 0; i < legs * 4; i++) {
+        for (int i = 0; i < row_len; i++) {
             _pivot_row[i] = 0;
             _pivot_row2[i] = 0;
         }
 
         // try to get a pivot row in constant time
         unsigned char pivot = 0;
-        uint32_t pivot_is_zero = -1;
+        uint64_t pivot_is_zero = -1;
         for (int row = pivot_row_lower_bound;
                 row <= MAYO_MIN(nrows - 1, pivot_row_upper_bound + 32); row++) {
 
-            uint32_t is_pivot_row = ~ct_compare_32(row, pivot_row);
-            uint32_t below_pivot_row = ct_is_greater_than(row, pivot_row);
+            uint64_t is_pivot_row = ~ct_compare_64(row, pivot_row);
+            uint64_t below_pivot_row = ct_64_is_greater_than(row, pivot_row);
 
-            for (int j = 0; j < legs * 4; j++) {
+            for (int j = 0; j < row_len; j++) {
                 _pivot_row[j] ^= (is_pivot_row | (below_pivot_row & pivot_is_zero)) &
-                                 bitsliced_A[row * legs * 4 + j];
+                                 packed_A[row * row_len + j];
             }
-            pivot = bitsliced_m_extract_element(legs, _pivot_row, pivot_col);
-            pivot_is_zero = ~ct_compare_32((int) pivot, 0);
+            pivot = m_extract_element(_pivot_row, pivot_col);
+            pivot_is_zero = ~ct_compare_64((int) pivot, 0);
         }
 
         // multiply pivot row by inverse of pivot
         inverse = inverse_f(pivot);
-#if defined(MAYO_VARIANT) && (((K_MAX * O_MAX + 1 + 31) / 32) == 3)
-        bitsliced_96_vec_mul_add(_pivot_row, inverse, _pivot_row2);
-#else
-        bitsliced_m_vec_mul_add(legs, _pivot_row, inverse, _pivot_row2);
-#endif
+        vec_mul_add_u64(row_len, _pivot_row, inverse, _pivot_row2);
 
         // conditionally write pivot row to the correct row, if there is a nonzero
         // pivot
         for (int row = pivot_row_lower_bound; row <= pivot_row_upper_bound; row++) {
-            uint32_t do_copy = ~ct_compare_32(row, pivot_row) & ~pivot_is_zero;
-            uint32_t do_not_copy = ~do_copy;
-            for (int col = 0; col < legs * 4; col++) {
-                bitsliced_A[row * legs * 4 + col] =
-                    (do_not_copy & bitsliced_A[row * legs * 4 + col]) +
+            uint64_t do_copy = ~ct_compare_64(row, pivot_row) & ~pivot_is_zero;
+            uint64_t do_not_copy = ~do_copy;
+            for (int col = 0; col < row_len; col++) {
+                packed_A[row * row_len + col] =
+                    (do_not_copy & packed_A[row * row_len + col]) +
                     (do_copy & _pivot_row2[col]);
             }
         }
 
         // eliminate entries below pivot
         for (int row = pivot_row_lower_bound; row < nrows; row++) {
-            unsigned char below_pivot = (unsigned char) (ct_is_greater_than(row, pivot_row) & ~pivot_is_zero);
-            unsigned char elt_to_elim = bitsliced_m_extract_element(
-                                            legs, bitsliced_A + row * legs * 4, pivot_col);
+            unsigned char below_pivot = (row > pivot_row);
+            unsigned char elt_to_elim = m_extract_element(packed_A + row * row_len, pivot_col);
 
-#if defined(MAYO_VARIANT) && (((K_MAX * O_MAX + 1 + 31) / 32) == 3)
-            bitsliced_96_vec_mul_add(_pivot_row2, below_pivot & elt_to_elim,
-                                    bitsliced_A + row * legs * 4);
-#elif defined(MAYO_VARIANT) && (((K_MAX * O_MAX + 1 + 31) / 32) == 4)
-            bitsliced_128_vec_mul_add((uint64_t *)_pivot_row2, below_pivot & elt_to_elim,
-                                    (uint64_t *)(bitsliced_A + row * legs * 4));                                    
-#else
-            bitsliced_m_vec_mul_add(legs, _pivot_row2, below_pivot & elt_to_elim,
-                                    bitsliced_A + row * legs * 4);
-
-#endif
-                            
+            vec_mul_add_u64(row_len, _pivot_row2, below_pivot * elt_to_elim,
+                                    packed_A + row * row_len);                            
         }
 
-        pivot_row += (-(int32_t)(~pivot_is_zero));
+        pivot_row += (-(int64_t)(~pivot_is_zero));
     }
 
-    unsigned char temp[(O_MAX * K_MAX + 1 + 32) * 100];
+    unsigned char temp[(O_MAX * K_MAX + 1 + 15)];
 
     // unbitslice the matrix A
     for (int i = 0; i < nrows; i++) {
-        ef_unbitslice_m_vec(legs, bitsliced_A + i * legs * 4, temp);
+        ef_unpack_m_vec(row_len, packed_A + i * row_len, temp);
         for (int j = 0; j < ncols; j++) {
             A[i * ncols + j] = temp[j];
         }
     }
 
-    mayo_secure_clear(temp, K_MAX * O_MAX + 1 + 32);
-    mayo_secure_clear(_pivot_row, (K_MAX * O_MAX + 1 + 31) / 32 * 4 * 4);
-    mayo_secure_clear(_pivot_row2, (K_MAX * O_MAX + 1 + 31) / 32 * 4 * 4);
+    mayo_secure_clear(temp, K_MAX * O_MAX + 1 + 15);
+    mayo_secure_clear(_pivot_row, (K_MAX * O_MAX + 1 + 15) / 16 * 8);
+    mayo_secure_clear(_pivot_row2, (K_MAX * O_MAX + 1 + 15) / 16 * 8);
+    mayo_secure_clear(packed_A, ((K_MAX * O_MAX + 1 + 15) / 16) * M_MAX * 8);
 }
 
 #endif
+
