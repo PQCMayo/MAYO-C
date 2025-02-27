@@ -364,7 +364,7 @@ int mayo_sign_signature(const mayo_params_t *p, unsigned char *sig,
     unsigned char y[M_MAX];                    // secret data
     unsigned char salt[SALT_BYTES_MAX];        // not secret data
     unsigned char V[K_MAX * V_BYTES_MAX + R_BYTES_MAX], Vdec[V_MAX * K_MAX];                 // secret data
-    unsigned char A[((M_MAX+7)/8*8) * (K_MAX * O_MAX + 1)];   // secret data
+    unsigned char A[((M_MAX+7)/8*8) * (K_MAX * O_MAX + 1)] = { 0 };   // secret data
     unsigned char x[K_MAX * N_MAX];                       // not secret data
     unsigned char r[K_MAX * O_MAX + 1] = { 0 };           // secret data
     unsigned char s[K_MAX * N_MAX];                       // not secret data
@@ -403,8 +403,6 @@ int mayo_sign_signature(const mayo_params_t *p, unsigned char *sig,
     uint64_t *P1 = sk.p;
     uint64_t *L  = P1 + PARAM_P1_limbs(p);
     uint64_t Mtmp[K_MAX * O_MAX * M_VEC_LIMBS_MAX] = {0};
-    uint64_t vPv[K_MAX * K_MAX * M_VEC_LIMBS_MAX] = {0};
-
 
 #ifdef TARGET_BIG_ENDIAN
     for (int i = 0; i < PARAM_P1_limbs(p); ++i) {
@@ -455,9 +453,9 @@ int mayo_sign_signature(const mayo_params_t *p, unsigned char *sig,
         }
 
         // compute M_i matrices and all v_i*P1*v_j
-        compute_M_and_VPV(p, Vdec, L, P1, Mtmp, vPv);
+        compute_M_and_VPV(p, Vdec, L, P1, Mtmp, (uint64_t*) A);
 
-        compute_rhs(p, vPv, t, y);
+        compute_rhs(p, (uint64_t*) A, t, y);
         compute_A(p, Mtmp, A);
 
         for (int i = 0; i < param_m; i++)
@@ -473,7 +471,7 @@ int mayo_sign_signature(const mayo_params_t *p, unsigned char *sig,
             break;
         } else {
             memset(Mtmp, 0, sizeof(Mtmp));
-            memset(vPv, 0, sizeof(vPv));
+            memset(A, 0, sizeof(A));
         }
     }
 
@@ -498,7 +496,6 @@ err:
     mayo_secure_clear(Ox, sizeof(Ox));
     mayo_secure_clear(tmp, sizeof(tmp));
     mayo_secure_clear(Mtmp, sizeof(Mtmp));
-    mayo_secure_clear(vPv, sizeof(vPv));
     return ret;
 }
 

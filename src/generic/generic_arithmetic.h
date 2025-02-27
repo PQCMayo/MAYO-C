@@ -86,18 +86,22 @@ void P1_times_Vt(const mayo_params_t* p, const uint64_t* P1, const unsigned char
     mul_add_m_upper_triangular_mat_x_mat_trans(PARAM_m_vec_limbs(p), P1, V, acc, PARAM_v(p), PARAM_v(p), PARAM_k(p), 1);
 }
 
+#if defined(HAVE_STACKEFFICIENT) || defined(PQM4)
 // compute P * S^t = [ P1  P2 ] * [S1] = [P1*S1 + P2*S2]
 //                   [  0  P3 ]   [S2]   [        P3*S2]
-static inline void mayo_generic_m_calculate_PS(const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, const unsigned char *S,
-                                               const int m, const int v, const int o, const int k, uint64_t *PS) {
+// compute S * PS  = [ S1 S2 ] * [ P1*S1 + P2*S2 = P1 ] = [ S1*P1 + S2*P2 ]
+//                               [         P3*S2 = P2 ]
+static inline void mayo_generic_m_calculate_PS_SPS(const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, const unsigned char *S,
+                                                   const int m, const int v, const int o, const int k, uint64_t *SPS) {
 
     const int n = o + v;
     const int m_vec_limbs = (m + 15)/16;
 
-    #if defined(HAVE_STACKEFFICIENT) || defined(PQM4)
+    uint64_t PS[(N_MAX + K_MAX) * M_VEC_LIMBS_MAX] = { 0 };
     uint64_t accumulator[16 * ((M_MAX+15)/16) * N_MAX] = {0};
     int P1_used;
     int P3_used;
+    
     for (int col = 0; col < k; col++) {
         for(unsigned int i = 0; i < sizeof(accumulator)/8; i++) {
             accumulator[i] = 0;
@@ -123,11 +127,33 @@ static inline void mayo_generic_m_calculate_PS(const uint64_t *P1, const uint64_
             }
         }
 
-         for (int row = 0; row < n; row++) {
-            m_vec_multiply_bins(m_vec_limbs, accumulator + row * 16 * m_vec_limbs, PS + (row * k + col) * m_vec_limbs);
-         }
+        for (int row = 0; row < n; row++) {
+            m_vec_multiply_bins(m_vec_limbs, accumulator + row * 16 * m_vec_limbs, PS + (row + col) * m_vec_limbs);
+        }
+
+        for (int row = 0; row < k; row++) {
+            for (unsigned int i = 0; i < 16*((M_MAX+15)/16); ++i)
+                accumulator[i] = 0;
+            for (int j = 0; j < n; j++) {
+                m_vec_add(m_vec_limbs, PS + (j + col) * m_vec_limbs, accumulator + S[row * n + j]*m_vec_limbs);
+            }
+            m_vec_multiply_bins(m_vec_limbs, accumulator, SPS + (row * k + col) * m_vec_limbs);
+        }
+
     }
-    #else
+
+}
+
+#else
+
+// compute P * S^t = [ P1  P2 ] * [S1] = [P1*S1 + P2*S2]
+//                   [  0  P3 ]   [S2]   [        P3*S2]
+static inline void mayo_generic_m_calculate_PS(const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, const unsigned char *S,
+                                               const int m, const int v, const int o, const int k, uint64_t *SPS) {
+
+    const int n = o + v;
+    const int m_vec_limbs = (m + 15)/16;
+
     uint64_t accumulator[16 * ((M_MAX+15)/16) * K_MAX * N_MAX] = {0};
     int P1_used = 0;
     for (int row = 0; row < v; row++) {
@@ -158,14 +184,14 @@ static inline void mayo_generic_m_calculate_PS(const uint64_t *P1, const uint64_
     // multiply stuff according to the bins of the accumulator and add to PS.
     int i = 0;
     while (i < n * k) {
-        m_vec_multiply_bins(m_vec_limbs, accumulator + i * 16 * m_vec_limbs, PS + i * m_vec_limbs);
+        m_vec_multiply_bins(m_vec_limbs, accumulator + i * 16 * m_vec_limbs, SPS + i * m_vec_limbs);
         i++;
     }
 
-    #endif
 }
 
-
+// compute S * PS  = [ S1 S2 ] * [ P1*S1 + P2*S2 = P1 ] = [ S1*P1 + S2*P2 ]
+//                               [         P3*S2 = P2 ]
 static inline void mayo_generic_m_calculate_SPS(const uint64_t *PS, const unsigned char *S, int m, int k, int  n, uint64_t *SPS){
     uint64_t accumulator[16*((M_MAX+15)/16)*K_MAX*K_MAX] = {0};
     const int m_vec_limbs = (m + 15)/ 16;
@@ -184,6 +210,8 @@ static inline void mayo_generic_m_calculate_SPS(const uint64_t *PS, const unsign
         i++;
     }
 }
+
+#endif
 
 
 static inline
@@ -252,11 +280,15 @@ static inline void m_calculate_PS_SPS(const mayo_params_t *p, const uint64_t *P1
     #ifndef ENABLE_PARAMS_DYNAMIC
     (void) p;
     #endif
+    #if defined(HAVE_STACKEFFICIENT) || defined(PQM4)
+    mayo_generic_m_calculate_PS_SPS(P1, P2, P3, s, PARAM_m(p), PARAM_v(p), PARAM_o(p), PARAM_k(p), SPS);
+    #else
     uint64_t PS[N_MAX * K_MAX * M_VEC_LIMBS_MAX] = { 0 };
     mayo_generic_m_calculate_PS(P1, P2, P3, s, PARAM_m(p), PARAM_v(p), PARAM_o(p), PARAM_k(p), PS);
 
     // compute S * P * S = S* (P*S)
     mayo_generic_m_calculate_SPS(PS, s, PARAM_m(p), PARAM_k(p), PARAM_n(p), SPS);
+    #endif
 }
 
 #endif

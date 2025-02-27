@@ -122,3 +122,7 @@ int sample_solution(const mayo_params_t *p, unsigned char *A,
     }
     return 1;
 }
+
+volatile uint32_t uint32_t_blocker = 0;
+volatile uint64_t uint64_t_blocker = 0;
+volatile unsigned char unsigned_char_blocker = 0;
