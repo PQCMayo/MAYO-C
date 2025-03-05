@@ -149,7 +149,7 @@ static inline void mayo_generic_m_calculate_PS_SPS(const uint64_t *P1, const uin
 // compute P * S^t = [ P1  P2 ] * [S1] = [P1*S1 + P2*S2]
 //                   [  0  P3 ]   [S2]   [        P3*S2]
 static inline void mayo_generic_m_calculate_PS(const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, const unsigned char *S,
-                                               const int m, const int v, const int o, const int k, uint64_t *SPS) {
+                                               const int m, const int v, const int o, const int k, uint64_t *PS) {
 
     const int n = o + v;
     const int m_vec_limbs = (m + 15)/16;
@@ -184,7 +184,7 @@ static inline void mayo_generic_m_calculate_PS(const uint64_t *P1, const uint64_
     // multiply stuff according to the bins of the accumulator and add to PS.
     int i = 0;
     while (i < n * k) {
-        m_vec_multiply_bins(m_vec_limbs, accumulator + i * 16 * m_vec_limbs, SPS + i * m_vec_limbs);
+        m_vec_multiply_bins(m_vec_limbs, accumulator + i * 16 * m_vec_limbs, PS + i * m_vec_limbs);
         i++;
     }
 
