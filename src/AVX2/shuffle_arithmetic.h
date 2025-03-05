@@ -400,9 +400,10 @@ void compute_P3(const mayo_params_t* p, const uint64_t* P1, uint64_t *P2, const 
 //                               [         P3*S2 = P2 ]
 static inline void m_calculate_PS_SPS(const mayo_params_t *p, const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, const unsigned char *S,
                               uint64_t *SPS) {
-    const int o = PARAM_o(p);
-    const int v = PARAM_v(p);
-    const int k = PARAM_k(p);
+    (void) p;
+    const int o = PARAM_NAME(o);
+    const int v = PARAM_NAME(v);
+    const int k = PARAM_NAME(k);
     const int n = o + v;
     /* Old approach which is constant time but doesn't have to be */
     unsigned char S1[V_MAX*K_MAX]; // == N-O, K

@@ -27,7 +27,7 @@ implementations:
     signature_keypair: pqmayo_MAYO_2_avx2_crypto_sign_keypair
     signature_signature: pqmayo_MAYO_2_avx2_crypto_sign_signature
     signature_verify: pqmayo_MAYO_2_avx2_crypto_sign_verify
-    sources: LICENSE NOTICE ./src/arithmetic.c ./src/arithmetic.h ./src/mayo.c ./src/params.c ./src/simple_arithmetic.h ./src/AVX2/arithmetic_common.h ./src/AVX2/echelon_form.h ./src/AVX2/echelon_form_loop.h ./src/AVX2/shuffle_arithmetic.h ./include/mayo.h ./include/mem.h ./src/common/aes_ctr.h ./src/mayo_2/api.h ./src/mayo_2/api.c
+    sources: LICENSE NOTICE ./src/arithmetic.c ./src/arithmetic.h ./src/mayo.c ./src/params.c ./src/simple_arithmetic.h ./src/generic/arithmetic_fixed.h ./src/AVX2/arithmetic_common.h ./src/AVX2/echelon_form.h ./src/AVX2/echelon_form_loop.h ./src/AVX2/shuffle_arithmetic.h ./include/mayo.h ./include/mem.h ./src/common/aes_ctr.h ./src/mayo_2/api.h ./src/mayo_2/api.c
     supported_platforms:
       - architecture: x86_64
         operating_systems:
@@ -42,7 +42,7 @@ implementations:
     signature_keypair: pqmayo_MAYO_2_neon_crypto_sign_keypair
     signature_signature: pqmayo_MAYO_2_neon_crypto_sign_signature
     signature_verify: pqmayo_MAYO_2_neon_crypto_sign_verify
-    sources: LICENSE NOTICE ./src/arithmetic.c ./src/arithmetic.h ./src/mayo.c ./src/params.c ./src/simple_arithmetic.h ./src/neon/arithmetic_common.h ./src/neon/echelon_form.h ./src/neon/echelon_form_loop.h ./src/neon/shuffle_arithmetic.h ./include/mayo.h ./include/mem.h ./src/common/aes_ctr.h ./src/mayo_2/api.h ./src/mayo_2/api.c
+    sources: LICENSE NOTICE ./src/arithmetic.c ./src/arithmetic.h ./src/mayo.c ./src/params.c ./src/simple_arithmetic.h ./src/generic/arithmetic_fixed.h ./src/neon/arithmetic_common.h ./src/neon/echelon_form.h ./src/neon/echelon_form_loop.h ./src/neon/shuffle_arithmetic.h ./include/mayo.h ./include/mem.h ./src/common/aes_ctr.h ./src/mayo_2/api.h ./src/mayo_2/api.c
     supported_platforms:
       - architecture: arm_8
         operating_systems:
