@@ -127,7 +127,7 @@ AES256_CTR_DRBG_Update(unsigned char *provided_data,
 int randombytes(unsigned char *random_array, size_t nbytes) {
     int ret = randombytes_nist(random_array, nbytes);
 #ifdef ENABLE_CT_TESTING
-    VALGRIND_MAKE_MEM_UNDEFINED(random_array, ret);
+    VALGRIND_MAKE_MEM_UNDEFINED(random_array, nbytes);
 #endif
     return ret;
 }

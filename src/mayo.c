@@ -510,7 +510,7 @@ int mayo_sign(const mayo_params_t *p, unsigned char *sm,
               size_t mlen, const unsigned char *csk) {
     int ret = MAYO_OK;
     const int param_sig_bytes = PARAM_sig_bytes(p);
-    size_t siglen;
+    size_t siglen = param_sig_bytes;
     memmove(sm + param_sig_bytes, m, mlen);
     ret = mayo_sign_signature(p, sm, &siglen, sm + param_sig_bytes, mlen, csk);
     if (ret != MAYO_OK || siglen != (size_t) param_sig_bytes){
@@ -605,6 +605,7 @@ int mayo_keypair_compact(const mayo_params_t *p, unsigned char *cpk,
 #if !defined(PQM4) && !defined(HAVE_RANDOMBYTES_NORETVAL)
     err:
 #endif
+    mayo_secure_clear(S, PK_SEED_BYTES_MAX + O_BYTES_MAX);
     mayo_secure_clear(O, sizeof(O));
     mayo_secure_clear(P2, PARAM_P2_limbs(p)*sizeof(uint64_t));
     mayo_secure_clear(P3, sizeof(P3));

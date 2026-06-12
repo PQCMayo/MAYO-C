@@ -597,26 +597,27 @@ int test_sample_sol(const mayo_params_t *p) {
     unsigned char r[K_MAX * O_MAX + 1] = {0};
 
     const int cols = param_k*param_o + 1;
-
-    for (int i = 0; i < param_m*(param_k*param_o + 1); i++)
-    {
-        A[i] = rand() % 16;
-        A1[i] = A[i];
-    }
+    int solved = 0;
     
-    for (int i = 0; i < param_m; i++)
-    {
-        y[i] = rand() % 16;
-    }
+    do {
+        for (int i = 0; i < param_m*(param_k*param_o + 1); i++)
+        {
+            A[i] = rand() % 16;
+            A1[i] = A[i];
+        }
 
-    for (int i = 0; i < param_o*param_k; i++)
-    {
-        r[i] = rand() % 16;
-    }
+        for (int i = 0; i < param_m; i++)
+        {
+            y[i] = rand() % 16;
+        }
 
-    //sample random A 
+        for (int i = 0; i < param_o*param_k; i++)
+        {
+            r[i] = rand() % 16;
+        }
 
-    sample_solution(p, A, y, r, x, param_k, param_o, param_m, cols);
+        solved = sample_solution(p, A, y, r, x, param_k, param_o, param_m, cols);
+    } while (!solved);
 
     unsigned char yy[M_MAX] = {0};
 

@@ -13,8 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <stddef.h>
-#include <stdint.h>
+#include <mem.h>
 
 #define SHAKE128_RATE 168
 #define SHAKE256_RATE 136
@@ -714,7 +713,7 @@ void shake128_inc_ctx_clone(shake128incctx *dest, const shake128incctx *src) {
 }
 
 void shake128_inc_ctx_release(shake128incctx *state) {
-    free(state->ctx);
+    mayo_secure_free(state->ctx, PQC_SHAKEINCCTX_BYTES);
 }
 
 void shake256_inc_init(shake256incctx *state) {
@@ -746,7 +745,7 @@ void shake256_inc_ctx_clone(shake256incctx *dest, const shake256incctx *src) {
 }
 
 void shake256_inc_ctx_release(shake256incctx *state) {
-    free(state->ctx);
+    mayo_secure_free(state->ctx, PQC_SHAKEINCCTX_BYTES);
 }
 
 
@@ -795,7 +794,7 @@ void shake128_ctx_clone(shake128ctx *dest, const shake128ctx *src) {
 
 /** Release the allocated state. Call only once. */
 void shake128_ctx_release(shake128ctx *state) {
-    free(state->ctx);
+    mayo_secure_free(state->ctx, PQC_SHAKECTX_BYTES);
 }
 
 /*************************************************
@@ -843,7 +842,7 @@ void shake256_ctx_clone(shake256ctx *dest, const shake256ctx *src) {
 
 /** Release the allocated state. Call only once. */
 void shake256_ctx_release(shake256ctx *state) {
-    free(state->ctx);
+    mayo_secure_free(state->ctx, PQC_SHAKECTX_BYTES);
 }
 
 /*************************************************
@@ -873,6 +872,7 @@ void shake128(uint8_t *output, size_t outlen,
         for (size_t i = 0; i < outlen; ++i) {
             output[i] = t[i];
         }
+        mayo_secure_clear(t, sizeof(t));
     }
     shake128_ctx_release(&s);
 }
@@ -904,6 +904,7 @@ void shake256(uint8_t *output, size_t outlen,
         for (size_t i = 0; i < outlen; ++i) {
             output[i] = t[i];
         }
+        mayo_secure_clear(t, sizeof(t));
     }
     shake256_ctx_release(&s);
 }
