@@ -31,10 +31,22 @@ endif()
 
 set(SOURCE_FILES_MAYO mayo.c params.c arithmetic.c)
 
+# clang turns the strided byte loops in compute_A into gathers and scatters under
+# -march=icelake-server; capping the auto-vectoriser at 128 bits removes them. Explicit
+# intrinsics are unaffected.
+if (${MAYO_BUILD_TYPE} MATCHES "gfni" AND CMAKE_C_COMPILER_ID MATCHES "Clang")
+    set_source_files_properties(mayo.c PROPERTIES COMPILE_OPTIONS "-mprefer-vector-width=128")
+endif()
+
 if (${MAYO_BUILD_TYPE} MATCHES "avx2")
     message("Building for avx2")
     set(INC_PLATFORM ${PROJECT_SOURCE_DIR}/src/AVX2 ${PROJECT_SOURCE_DIR}/src/generic)
     add_definitions(-DMAYO_AVX)
+elseif (${MAYO_BUILD_TYPE} MATCHES "gfni")
+    message("Building for gfni (AVX-512 + GFNI)")
+    set(INC_PLATFORM ${PROJECT_SOURCE_DIR}/src/AVX2 ${PROJECT_SOURCE_DIR}/src/generic)
+    add_definitions(-DMAYO_AVX)
+    add_definitions(-DMAYO_GFNI)
 elseif (${MAYO_BUILD_TYPE} MATCHES "neon")
     message("Building for neon")
     set(INC_PLATFORM ${PROJECT_SOURCE_DIR}/src/neon ${PROJECT_SOURCE_DIR}/src/generic)

@@ -35,6 +35,10 @@ else()
 	if(CMAKE_C_COMPILER_ID MATCHES "Clang")
 		set(STRICT_OPTIONS_CPP "${STRICT_OPTIONS_CPP} -Wno-error=unknown-warning-option -Qunused-arguments -Wno-tautological-compare")
 		set(STRICT_OPTIONS_CPP "${STRICT_OPTIONS_CPP} -Wno-unused-function -Wno-pass-failed")
+		# clang -march=native on some newer Intel CPUs (as found sporadically on CI
+		# runners) enables +avx512f together with +avx10.1-256, which clang 18 flags
+		# via -Winvalid-feature-combination; keep it non-fatal under -Werror.
+		set(STRICT_OPTIONS_CPP "${STRICT_OPTIONS_CPP} -Wno-error=invalid-feature-combination")
 	endif()
 	if(ENABLE_STRICT)
 		set(STRICT_OPTIONS_CPP "${STRICT_OPTIONS_CPP} -Werror -Wextra -Wno-unused-parameter -fno-strict-aliasing")

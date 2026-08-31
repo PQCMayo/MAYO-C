@@ -12,10 +12,11 @@ env:
 
 jobs:
   build_test:
-    runs-on: ubuntu-latest
+    #runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     strategy:
       matrix:
-        mayo_build_type: [ref, opt, avx2]
+        mayo_build_type: [ref, opt, avx2, gfni]
 
     steps:
     - uses: actions/checkout@v3
@@ -24,18 +25,18 @@ jobs:
       with:
         python-version: "3.10"
 
-    - name: Install xsltproc
-      run: sudo apt-get install -y xsltproc
-
-    - name: Install Valgrind
-      run: |
-          sudo apt-get update && sudo apt install valgrind
-          echo "Valgrind installed"
-
-    - name: Install Valgrind dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install ValgrindCI
+    #- name: Install xsltproc
+    #  run: sudo apt-get install -y xsltproc
+#
+    #- name: Install Valgrind
+    #  run: |
+    #      sudo apt-get update && sudo apt install valgrind
+    #      echo "Valgrind installed"
+#
+    #- name: Install Valgrind dependencies
+    #  run: |
+    #    python -m pip install --upgrade pip
+    #    pip install ValgrindCI
 
     # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
     # You can convert this to a matrix build if you need cross-platform coverage.

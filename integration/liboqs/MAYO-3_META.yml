@@ -4,7 +4,7 @@ claimed-nist-level: 3
 length-public-key: 2986
 length-secret-key: 32
 length-signature: 681
-nistkat-sha256: af940f5cd678bde08f452d3ee7e831ec1a2269715579c604ae699069b6fd9c15
+nistkat-sha256: c53b5f752f39b23b10d0e173f5853549e2e80716e0257633407871c9950b990f
 principal-submitters:
   - Ward Beullens
   - Fabio Campos
@@ -19,7 +19,7 @@ implementations:
     signature_keypair: pqmayo_MAYO_3_opt_crypto_sign_keypair
     signature_signature: pqmayo_MAYO_3_opt_crypto_sign_signature
     signature_verify: pqmayo_MAYO_3_opt_crypto_sign_verify
-    sources: LICENSE NOTICE ./src/arithmetic.c ./src/arithmetic.h ./src/mayo.c ./src/params.c ./src/simple_arithmetic.h ./src/generic/arithmetic_dynamic.h ./src/generic/arithmetic_fixed.h ./src/generic/echelon_form.h ./src/generic/ef_inner_loop.h ./src/generic/generic_arithmetic.h ./include/mayo.h ./include/mem.h ./src/common/aes_ctr.h ./src/mayo_3/api.h ./src/mayo_3/api.c
+    sources: LICENSE NOTICE ./src/arithmetic.c ./src/arithmetic.h ./src/mayo.c ./src/params.c ./src/simple_arithmetic.h ./src/generic/arithmetic_dynamic.h ./src/generic/arithmetic_fixed.h ./src/generic/echelon_form.h ./src/generic/ef_inner_loop.h ./src/generic/generic_arithmetic.h ./include/mayo.h ./include/mayo_constants.h ./include/mem.h ./src/common/aes_ctr.h ./integration/liboqs/aes_glue.c ./src/mayo_3/api.h ./src/mayo_3/api.c
   - name: avx2
     version: round2
     folder_name: .
@@ -27,7 +27,7 @@ implementations:
     signature_keypair: pqmayo_MAYO_3_avx2_crypto_sign_keypair
     signature_signature: pqmayo_MAYO_3_avx2_crypto_sign_signature
     signature_verify: pqmayo_MAYO_3_avx2_crypto_sign_verify
-    sources: LICENSE NOTICE ./src/arithmetic.c ./src/arithmetic.h ./src/mayo.c ./src/params.c ./src/simple_arithmetic.h ./src/generic/arithmetic_fixed.h ./src/AVX2/arithmetic_common.h ./src/AVX2/echelon_form.h ./src/AVX2/echelon_form_loop.h ./src/AVX2/shuffle_arithmetic.h ./include/mayo.h ./include/mem.h ./src/common/aes_ctr.h ./src/mayo_3/api.h ./src/mayo_3/api.c
+    sources: LICENSE NOTICE ./src/arithmetic.c ./src/arithmetic.h ./src/mayo.c ./src/params.c ./src/simple_arithmetic.h ./src/generic/arithmetic_fixed.h ./src/AVX2/arithmetic_common.h ./src/AVX2/echelon_form.h ./src/AVX2/echelon_form_loop.h ./src/AVX2/shuffle_arithmetic.h ./include/mayo.h ./include/mayo_constants.h ./include/mem.h ./src/common/aes_ctr.h ./integration/liboqs/aes_glue.c ./src/mayo_3/api.h ./src/mayo_3/api.c
     supported_platforms:
       - architecture: x86_64
         operating_systems:
@@ -42,7 +42,7 @@ implementations:
     signature_keypair: pqmayo_MAYO_3_neon_crypto_sign_keypair
     signature_signature: pqmayo_MAYO_3_neon_crypto_sign_signature
     signature_verify: pqmayo_MAYO_3_neon_crypto_sign_verify
-    sources: LICENSE NOTICE ./src/arithmetic.c ./src/arithmetic.h ./src/mayo.c ./src/params.c ./src/simple_arithmetic.h ./src/generic/arithmetic_fixed.h ./src/neon/arithmetic_common.h ./src/neon/echelon_form.h ./src/neon/echelon_form_loop.h ./src/neon/shuffle_arithmetic.h ./include/mayo.h ./include/mem.h ./src/common/aes_ctr.h ./src/mayo_3/api.h ./src/mayo_3/api.c
+    sources: LICENSE NOTICE ./src/arithmetic.c ./src/arithmetic.h ./src/mayo.c ./src/params.c ./src/simple_arithmetic.h ./src/generic/arithmetic_fixed.h ./src/neon/arithmetic_common.h ./src/neon/echelon_form.h ./src/neon/echelon_form_loop.h ./src/neon/shuffle_arithmetic.h ./include/mayo.h ./include/mayo_constants.h ./include/mem.h ./src/common/aes_ctr.h ./integration/liboqs/aes_glue.c ./src/mayo_3/api.h ./src/mayo_3/api.c
     supported_platforms:
       - architecture: arm_8
         operating_systems:

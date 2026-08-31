@@ -15,6 +15,11 @@
 
 #include <mayo.c>
 
+/* These tests exercise the quadratic map P* on its own -- its vanishing on the oil
+   space, its homogeneity, and the linear system built from it -- so they pass a zero
+   lambda, which makes eval_public_map compute exactly P*(s). */
+static const uint64_t test_lambda_zero[N_MAX * M_VEC_LIMBS_MAX + MAYO_MVEC_SLACK] = {0};
+
 #ifdef ENABLE_CT_TESTING
 #include <valgrind/memcheck.h>
 #endif
@@ -52,7 +57,7 @@ int test_mayo(const mayo_params_t *p) {
     }
 
 #ifdef ENABLE_CT_TESTING
-    VALGRIND_MAKE_MEM_DEFINED(pk, p->cpk_bytes);
+    VALGRIND_MAKE_MEM_DEFINED(pk, PARAM_cpk_bytes(p));
 #endif
 
     size_t smlen = PARAM_sig_bytes(p) + 32;
@@ -66,9 +71,9 @@ int test_mayo(const mayo_params_t *p) {
 
     /*
     printf("pk: ");
-    print_hex(pk, p->cpk_bytes, 40);
+    print_hex(pk, PARAM_cpk_bytes(p), 40);
     printf("sk: ");
-    print_hex(sk, p->csk_bytes, 40);
+    print_hex(sk, PARAM_csk_bytes(p), 40);
     printf("sm: ");
     print_hex(sig, smlen, 40); */
 
@@ -152,7 +157,7 @@ int test_eval_oil(const mayo_params_t *p) {
     //memset(O, 0, param_v*param_o);
     //O[0] = 1;
 
-    expand_P1_P2(p, P, seed_pk);
+    expand_P1_P2(p, P, seed_pk, 0);
 
     uint64_t *P1 = P;
     uint64_t *P2 = P + PARAM_P1_limbs(p);
@@ -190,12 +195,12 @@ int test_eval_oil(const mayo_params_t *p) {
 
     // evaluate Public map at s
     unsigned char y[2*M_MAX] = {0};
-    eval_public_map(p, s, P1,P2,P3_upper, y);
+    eval_public_map(p, s, P1,P2,P3_upper, test_lambda_zero, y);
 
     for (int i = 0; i < param_m; i++)
     {
         if(y[i] != 0){
-            ret = 1;
+            ret = MAYO_ERR;
         }
     }
 
@@ -254,7 +259,7 @@ int test_eval_quad(const mayo_params_t *p) {
     //memset(O, 0, param_v*param_o);
     //O[1] = 1;
 
-    expand_P1_P2(p, P, seed_pk);
+    expand_P1_P2(p, P, seed_pk, 0);
 
     uint64_t *P1 = P;
     uint64_t *P2 = P + PARAM_P1_limbs(p);
@@ -277,7 +282,7 @@ int test_eval_quad(const mayo_params_t *p) {
     }
 
     unsigned char y[2*M_MAX] = {0};
-    eval_public_map(p, s, P1,P2,P3_upper, y);
+    eval_public_map(p, s, P1,P2,P3_upper, test_lambda_zero, y);
 
     for (int i = 0; i < 16; i++)
     {
@@ -290,7 +295,7 @@ int test_eval_quad(const mayo_params_t *p) {
             ss[j] = mul_f(s[j], i);
         }
 
-        eval_public_map(p, ss, P1,P2,P3_upper, yy);
+        eval_public_map(p, ss, P1,P2,P3_upper, test_lambda_zero, yy);
         unsigned char i_sq = mul_f(i,i);
 
         for (int j = 0; j < param_m; j++)
@@ -347,7 +352,7 @@ int test_A(const mayo_params_t *p) {
     const int param_O_bytes = PARAM_O_bytes(p);
     const int param_pk_seed_bytes = PARAM_pk_seed_bytes(p);
     const int param_sk_seed_bytes = PARAM_sk_seed_bytes(p);
-    uint64_t Mtmp[K_MAX * O_MAX * M_VEC_LIMBS_MAX] = {0};
+    int solved = 0;
 
     // seed_sk $←- B^(sk_seed bytes)
     randombytes(seed_sk, param_sk_seed_bytes);
@@ -361,7 +366,7 @@ int test_A(const mayo_params_t *p) {
     // o ← Decode_o(s[pk_seed_bytes : pk_seed_bytes + o_bytes])
     decode(S + param_pk_seed_bytes, O, param_v * param_o);
 
-    expand_P1_P2(p, P, seed_pk);
+    expand_P1_P2(p, P, seed_pk, 0);
 
     uint64_t *P1 = P;
     uint64_t *P2 = P + PARAM_P1_limbs(p);
@@ -381,172 +386,179 @@ int test_A(const mayo_params_t *p) {
     memcpy(L, P2, PARAM_P2_limbs(p)*sizeof(uint64_t));
     P1P1t_times_O(p, P1, O, L);
 
-    // sample vinegar
     unsigned char v[V_MAX * K_MAX] = {0};
-    for (int i = 0; i < param_v*param_k; i++)
-    {
-        v[i] = rand() % 16;
-    }
-
-    unsigned char A1[((M_MAX+7)/8*8) * (K_MAX * O_MAX + 1)] = {0};
-    unsigned char A2[M_MAX * (K_MAX * O_MAX + 1)] = {0};
-
-    uint64_t VPV[ PARAM_m_vec_limbs(p)*V_MAX*V_MAX];
-    compute_M_and_VPV(p, v, L, P1, Mtmp, VPV);
-
-    compute_A(p, Mtmp, A1);
-
-    unsigned char s_base[N_MAX*K_MAX] = {0};
-    for (int i = 0; i < param_k; i++)
-    {
-        for (int j = 0; j < param_v; j++)
-        {
-            s_base[i*param_n + j] = v[i*param_v + j];
-        }        
-    }
-    
-    unsigned char y_base[M_MAX] = {0};
-    eval_public_map(p, s_base, P1, P2, P3_upper, y_base);
-
-    for (int i = 0; i < param_k; i++)
-    {
-        for (int j = 0; j < param_o; j++)
-        {
-            unsigned char s[N_MAX*K_MAX] = {0};
-            memcpy(s, s_base, param_n*param_k);
-
-            for (int k = 0; k < param_v; k++)
-            {
-                s[k + i * param_n] ^= O[k*param_o + j];
-            }
-            s[param_v + i*param_n + j] ^= 1;
-
-            unsigned char y[M_MAX] = {0};
-            eval_public_map(p, s, P1, P2, P3_upper, y);
-            
-            for (int k = 0; k < param_m; k++)
-            {
-                y[k] ^= y_base[k];
-            }
-
-            for (int k = 0; k < param_m; k++)
-            {
-                A2[k*(param_k*param_o+1) + i*param_o + j] = y[k];
-            }         
-        }
-    }
-    
-    for (int i = 0; i < param_m*(param_k*param_o+1); i++)
-    {
-        if (A1[i] != A2[i]){
-            ret = 1;
-
-            printf("A differs in row %d, col %d\n", i / (param_k*param_o + 1), i % (param_k*param_o + 1) );
-            break;
-        }
-    }
-
-    if(ret == 1){
-
-    printf("A computed normally:\n");
-        for (int i = 0; i < param_m; i++)
-        {
-            printf("%3d: ", i);
-            for (int j = 0; j < param_k*param_o + 1; j++)
-            {
-                if (j % param_o == 0 && j > 0){
-                    printf("|");
-                }
-                printf("%1x", A1[i*(param_k*param_o+1)+j]);
-            }
-            printf("\n");
-        }
-
-        printf("A computed via evaluations:\n");
-        for (int i = 0; i < param_m; i++)
-        {
-            printf("%3d: ", i);
-            for (int j = 0; j < param_k*param_o + 1; j++)
-            {
-                if (j % param_o == 0 && j > 0){
-                    printf("|");
-                }
-                printf("%1x", A2[i*(param_k*param_o+1)+j]);
-            }
-            printf("\n");
-        }
-    }
-
     unsigned char s[N_MAX*K_MAX] = {0};
-    memcpy(s, s_base, param_n*param_k);
-
-    // sample random s = v + o
-    for (int i = 0; i < param_k; i++)
-    {
-        for (int j = 0; j < param_o; j++)
-        {
-            s[i*param_n + param_v + j] = rand() % 16;
-
-            for (int k = 0; k < param_v; k++)
-            {
-                s[k + i * param_n] ^= mul_f(s[i*param_n + param_v + j], O[k*param_o + j]);
-            }
-        }
-    }
-
-    unsigned char y[M_MAX] = {0};
-    unsigned char y1[M_MAX] = {0};
-    unsigned char y2[M_MAX] = {0};
-    eval_public_map(p, s, P1, P2, P3_upper, y);
-
-    // compute y_base + A*o
-    memcpy(y1, y_base, param_m);
-    memcpy(y2, y_base, param_m);
-
-    for (int i = 0; i < param_k; i++)
-    {
-        for (int j = 0; j < param_o; j++)
-        {
-            for (int k = 0; k < param_m; k++)
-            {
-                y1[k] ^= mul_f( s[i*param_n + param_v + j], A1[k*(param_k*param_o+1)+i*param_o+j] );
-                y2[k] ^= mul_f( s[i*param_n + param_v + j], A2[k*(param_k*param_o+1)+i*param_o+j] );
-            }
-        }
-    }    
-
-    if (memcmp(y,y1, param_m) != 0){
-        printf("A1 is wrong!\n");
-        ret = MAYO_ERR;
-    }
-
-    if (memcmp(y,y2, param_m) != 0){
-        printf("A2 is wrong!\n");
-        ret = MAYO_ERR;
-    }
-
+    unsigned char s_base[N_MAX*K_MAX] = {0};
     unsigned char t[M_MAX] = {0};
-    unsigned char tt[M_MAX] = {0};
     unsigned char x[V_MAX*K_MAX] = {0};
-    unsigned char r[V_MAX*K_MAX] = {0};
 
-    for (int i = 0; i < param_k*param_o; i++)
-    {
-        r[i] = rand() % 16;
-    }
+    do {
+        // sample vinegar
+        for (int i = 0; i < param_v*param_k; i++)
+        {
+            v[i] = rand() % 16;
+        }
 
-    for (int i = 0; i < param_m; i++)
-    {
-        t[i]  = rand() % 16;
-        tt[i] = t[i];
-    }
+        memset(s, 0, N_MAX*K_MAX);
 
-    for (int i = 0; i < param_m; i++)
-    {
-        tt[i] ^= y_base[i];
-    }
-    
-    sample_solution(p, A1, tt, r, x, param_k, param_o, param_m, param_k*param_o + 1);
+        unsigned char A1[((M_MAX+7)/8*8) * (K_MAX * O_MAX + 1) + 32] = {0};
+        unsigned char A2[M_MAX * (K_MAX * O_MAX + 1)] = {0};
+
+        uint64_t VPV[ PARAM_m_vec_limbs(p)*V_MAX*V_MAX];
+        
+        uint64_t Mtmp[K_MAX * O_MAX * M_VEC_LIMBS_MAX] = {0};
+        compute_M_and_VPV(p, v, L, P1, Mtmp, VPV);
+
+        compute_A(p, Mtmp, A1);
+
+        for (int i = 0; i < param_k; i++)
+        {
+            for (int j = 0; j < param_v; j++)
+            {
+                s_base[i*param_n + j] = v[i*param_v + j];
+            }        
+        }
+        
+        unsigned char y_base[M_MAX] = {0};
+        eval_public_map(p, s_base, P1, P2, P3_upper, test_lambda_zero, y_base);
+
+        for (int i = 0; i < param_k; i++)
+        {
+            for (int j = 0; j < param_o; j++)
+            {
+                memcpy(s, s_base, param_n*param_k);
+
+                for (int k = 0; k < param_v; k++)
+                {
+                    s[k + i * param_n] ^= O[k*param_o + j];
+                }
+                s[param_v + i*param_n + j] ^= 1;
+
+                unsigned char y[M_MAX] = {0};
+                eval_public_map(p, s, P1, P2, P3_upper, test_lambda_zero, y);
+                
+                for (int k = 0; k < param_m; k++)
+                {
+                    y[k] ^= y_base[k];
+                }
+
+                for (int k = 0; k < param_m; k++)
+                {
+                    A2[k*(param_k*param_o+1) + i*param_o + j] = y[k];
+                }         
+            }
+        }
+        
+        for (int i = 0; i < param_m*(param_k*param_o+1); i++)
+        {
+            if (A1[i] != A2[i]){
+                ret = MAYO_ERR;
+
+                printf("A differs in row %d, col %d\n", i / (param_k*param_o + 1), i % (param_k*param_o + 1) );
+                break;
+            }
+        }
+
+        if(ret == MAYO_ERR){
+
+        printf("A computed normally:\n");
+            for (int i = 0; i < param_m; i++)
+            {
+                printf("%3d: ", i);
+                for (int j = 0; j < param_k*param_o + 1; j++)
+                {
+                    if (j % param_o == 0 && j > 0){
+                        printf("|");
+                    }
+                    printf("%1x", A1[i*(param_k*param_o+1)+j]);
+                }
+                printf("\n");
+            }
+
+            printf("A computed via evaluations:\n");
+            for (int i = 0; i < param_m; i++)
+            {
+                printf("%3d: ", i);
+                for (int j = 0; j < param_k*param_o + 1; j++)
+                {
+                    if (j % param_o == 0 && j > 0){
+                        printf("|");
+                    }
+                    printf("%1x", A2[i*(param_k*param_o+1)+j]);
+                }
+                printf("\n");
+            }
+        }
+
+        unsigned char s[N_MAX*K_MAX] = {0};
+        memcpy(s, s_base, param_n*param_k);
+
+        // sample random s = v + o
+        for (int i = 0; i < param_k; i++)
+        {
+            for (int j = 0; j < param_o; j++)
+            {
+                s[i*param_n + param_v + j] = rand() % 16;
+
+                for (int k = 0; k < param_v; k++)
+                {
+                    s[k + i * param_n] ^= mul_f(s[i*param_n + param_v + j], O[k*param_o + j]);
+                }
+            }
+        }
+
+        unsigned char y[M_MAX] = {0};
+        unsigned char y1[M_MAX] = {0};
+        unsigned char y2[M_MAX] = {0};
+        eval_public_map(p, s, P1, P2, P3_upper, test_lambda_zero, y);
+
+        // compute y_base + A*o
+        memcpy(y1, y_base, param_m);
+        memcpy(y2, y_base, param_m);
+
+        for (int i = 0; i < param_k; i++)
+        {
+            for (int j = 0; j < param_o; j++)
+            {
+                for (int k = 0; k < param_m; k++)
+                {
+                    y1[k] ^= mul_f( s[i*param_n + param_v + j], A1[k*(param_k*param_o+1)+i*param_o+j] );
+                    y2[k] ^= mul_f( s[i*param_n + param_v + j], A2[k*(param_k*param_o+1)+i*param_o+j] );
+                }
+            }
+        }    
+
+        if (memcmp(y,y1, param_m) != 0){
+            printf("A1 is wrong!\n");
+            ret = MAYO_ERR;
+        }
+
+        if (memcmp(y,y2, param_m) != 0){
+            printf("A2 is wrong!\n");
+            ret = MAYO_ERR;
+        }
+
+        unsigned char tt[M_MAX] = {0};
+        unsigned char r[V_MAX*K_MAX] = {0};
+
+        for (int i = 0; i < param_k*param_o; i++)
+        {
+            r[i] = rand() % 16;
+        }
+
+        for (int i = 0; i < param_m; i++)
+        {
+            t[i]  = rand() % 16;
+            tt[i] = t[i];
+        }
+
+        for (int i = 0; i < param_m; i++)
+        {
+            tt[i] ^= y_base[i];
+        }
+        
+        solved = sample_solution(p, A1, tt, r, x, param_k, param_o, param_m, param_k*param_o + 1);
+    } while (!solved); 
 
     memcpy(s, s_base, param_n*param_k);
 
@@ -561,7 +573,7 @@ int test_A(const mayo_params_t *p) {
     }
 
     unsigned char eval[M_MAX] = {0};
-    eval_public_map(p, s, P1, P2, P3_upper, eval);
+    eval_public_map(p, s, P1, P2, P3_upper, test_lambda_zero, eval);
 
 
     if (memcmp(t, eval, param_m) != 0){
@@ -590,8 +602,8 @@ int test_sample_sol(const mayo_params_t *p) {
 
 #define M_MAX_ROUND_UP (((M_MAX +7)/8)*8)
 
-    unsigned char A[M_MAX_ROUND_UP * (K_MAX * O_MAX + 1)] = {0};
-    unsigned char A1[M_MAX_ROUND_UP * (K_MAX * O_MAX + 1)] = {0};
+    unsigned char A[M_MAX_ROUND_UP * (K_MAX * O_MAX + 1) + 32] = {0};
+    unsigned char A1[M_MAX_ROUND_UP * (K_MAX * O_MAX + 1) + 32] = {0};
     unsigned char y[M_MAX] = {0};
     unsigned char x[K_MAX * N_MAX] = {0};
     unsigned char r[K_MAX * O_MAX + 1] = {0};

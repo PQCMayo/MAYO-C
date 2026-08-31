@@ -7,8 +7,8 @@ import math
 DEFAULT_PARAMETERS = {
     "MAYO_1": {
         "name": "mayo1",
-        "n": 86,
-        "m": 78,
+        "n": 88,
+        "m": 80,
         "o": 8,
         "k": 10,
         "q": 16,
@@ -19,10 +19,10 @@ DEFAULT_PARAMETERS = {
     },
     "MAYO_2": {
         "name": "mayo2",
-        "n": 81,
+        "n": 86,
         "m": 64,
-        "o": 17,
-        "k": 4,
+        "o": 13,
+        "k": 5,
         "q": 16,
         "pk_seed_bytes": 16,
         "sk_seed_bytes": 24,

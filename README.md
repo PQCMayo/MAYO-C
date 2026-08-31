@@ -11,8 +11,8 @@ MAYO-C is a C library implementation of [MAYO](https://pqmayo.org), a multivaria
 
 | Parameter Set | NIST Security Level | n | m | o | k | q | sk size | pk size | sig size |
 | --- | ---- | -- | -- | -- | -- | -- | -- | -- | -- |
-| MAYO_1 | 1 | 86 | 78 | 8 | 10 | 16 | 24 B | 1420 B | 454 B |
-| MAYO_2 | 1 | 81 | 64 | 17 | 4 | 16 | 24 B | 4912 B | 186 B |
+| MAYO_1 | 1 | 88 | 80 | 8 | 10 | 16 | 24 B | 1456 B | 464 B |
+| MAYO_2 | 1 | 86 | 64 | 13 | 5 | 16 | 24 B | 2928 B | 239 B |
 | MAYO_3 | 3 | 118 | 108 | 10 | 11 | 16 | 32 B | 2986 B | 681 B |
 | MAYO_5 | 5 | 154 | 142 | 12 | 12 | 16 | 40 B | 5554 B | 964 B |
 
@@ -36,8 +36,9 @@ The following build options have been used to report performance numbers in the 
 2. Optimized (AES-NI enabled): `cmake -DMAYO_BUILD_TYPE=opt -DENABLE_AESNI=ON ..`
 3. Optimized (AES-NI disabled): `cmake -DMAYO_BUILD_TYPE=opt -DENABLE_AESNI=OFF ..`
 4. AVX2: `cmake -DMAYO_BUILD_TYPE=avx2 -DENABLE_AESNI=ON ..`
-5. A64 M1/M2/M3 NEON: `cmake -DMAYO_BUILD_TYPE=neon -DENABLE_AESNEON=ON ..`
-6. A64 RPi4 Cortex-A72 NEON: `cmake -DMAYO_BUILD_TYPE=neon -DENABLE_AESNEON=OFF ..`
+5. AVX-512 + GFNI: `cmake -DMAYO_BUILD_TYPE=gfni -DENABLE_AESNI=ON ..`
+6. A64 M1/M2/M3 NEON: `cmake -DMAYO_BUILD_TYPE=neon -DENABLE_AESNEON=ON ..`
+7. A64 RPi4 Cortex-A72 NEON: `cmake -DMAYO_BUILD_TYPE=neon -DENABLE_AESNEON=OFF ..`
 
 ## Build options
 
@@ -61,11 +62,12 @@ Builds the library in strict mode: warnings terminate compilation). The default 
 
 ### MAYO_BUILD_TYPE
 
-Specifies the build type for which Mayo is built. The options are `ref`, `opt` and `avx2`. The effect is the following:
+Specifies the build type for which Mayo is built. The options are `ref`, `opt`, `avx2`, `gfni` and `neon`. The effect is the following:
 
 - `ref` builds MAYO implemented with portable C code for native target architecture, using run-time parameters.
 - `opt` builds MAYO implemented with optimized portable C code, compiled with `-march=native` (if available) and AES acceleration (if available)
 - `avx2` builds MAYO implemented with optimized AVX2 code, compiled with `-march=native` (if available) and AES acceleration (if available)
+- `gfni` builds MAYO implemented with optimized AVX-512 and GFNI code, compiled with `-march=native` (if available) and AES acceleration (if available). This requires a host CPU supporting AVX-512 and GFNI; where VAES is also present, AES-CTR uses the 512-bit VAES path.
 - `neon` builds MAYO implemented with optimized NEON code, compiled with `-march=native` (if available) and AES acceleration (if available)
 
 The default build type if none is specified is `opt`.
@@ -92,10 +94,10 @@ The following artifacts are built:
 - `libmayo_<level>_nistapi.a`: library for `MAYO_<level>` against the NIST API.
 - `libmayo_<level>_nistapi_test.a`: library for `MAYO_<level>` against the NIST API. Only for test, using the deterministic CTR-DRBG as backend.
 - `mayo_bench_<param>`: Benchmarking suites.
-- `mayo_test_kat_<param>` (`opt`, `avx2` and `neon`), `mayo_test_kat` (`ref`): KAT test suites.
-- `mayo_test_scheme_<param>` (`opt`, `avx2` and `neon`), `mayo_test_scheme` (`ref`): Self-test suites.
+- `mayo_test_kat_<param>` (`opt`, `avx2`, `gfni` and `neon`), `mayo_test_kat` (`ref`): KAT test suites.
+- `mayo_test_scheme_<param>` (`opt`, `avx2`, `gfni` and `neon`), `mayo_test_scheme` (`ref`): Self-test suites.
 - `PQCgenKAT_sign_<param>`: App for generating NIST KAT.
-- `example_<param>` (`opt`, `avx2` and `neon`), `example_mayo` (`ref`): Example app using the MAYO API.
+- `example_<param>` (`opt`, `avx2`, `gfni` and `neon`), `example_mayo` (`ref`): Example app using the MAYO API.
 - `example_nistapi_<param>`: Example app using the NIST API.
 
 ## Test
@@ -124,7 +126,7 @@ KAT verification is done as part of the test harness (see previous section).
 
 A benchmarking suite is built and runs with the following command, where `params` specifies the MAYO parameter set and `runs` the number of benchmark runs:
 
-If `MAYO_BUILD_TYPE` is `opt`, `avx2` or `neon`:
+If `MAYO_BUILD_TYPE` is `opt`, `avx2`, `gfni` or `neon`:
 - `test/mayo_bench_<param> <runs>`,
 - On Apple M1/M2/M3 chips, this must be run with root (`sudo`) permission.
 

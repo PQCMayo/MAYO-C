@@ -731,6 +731,19 @@ int AES_128_CTR(unsigned char *output, size_t outputByteLen,
     return (int)outputByteLen;
 }
 
+/* AES-128 in ECB mode over nblocks whole blocks. Used to build the lambda
+   keystream in mayo.c: the counter blocks are formed explicitly there and encrypted
+   block by block, so every backend produces the same stream regardless of how its
+   native CTR lays out nonce and counter. */
+int AES_128_ECB_C(unsigned char *output, const unsigned char *input, size_t nblocks,
+                  const unsigned char *key) {
+    aes128ctx ctx;
+    aes128_ecb_keyexp(&ctx, key);
+    aes128_ecb(output, input, nblocks, &ctx);
+    aes128_ctx_release(&ctx);
+    return (int)(nblocks * 16);
+}
+
 void AES_256_ECB(const uint8_t *input, const unsigned char *key, unsigned char *output) {
     aes256ctx ctx;
 

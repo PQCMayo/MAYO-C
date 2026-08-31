@@ -103,7 +103,7 @@ static int bench_sig(const mayo_params_t *p, int runs, int csv) {
     sk_t *esk  = calloc(1, sizeof(sk_t));
     unsigned char *sig = calloc(PARAM_sig_bytes(p) + m_len, 1);
     unsigned char *m   = calloc(m_len, 1);
-    size_t len = PARAM_sig_bytes(p);
+    size_t len;
 
     if (csv) {
         printf("%s,", PARAM_name(p));
@@ -123,13 +123,24 @@ static int bench_sig(const mayo_params_t *p, int runs, int csv) {
     mayo_expand_pk(p, pk, epk);
     BENCH_CODE_2("mayo_expand_pk", csv);
 
+    len = m_len;
+    BENCH_CODE_1(runs);
+    mayo_sign_esk(p, sig, &len, m, m_len, esk);
+    BENCH_CODE_2("mayo_sign_esk", csv);
+    
+    len = m_len;
+    BENCH_CODE_1(runs);
+    mayo_open_epk(p, m, &len, sig, PARAM_sig_bytes(p) + m_len, epk);
+    BENCH_CODE_2("mayo_open_epk", csv);
+
+    len = PARAM_sig_bytes(p);
     BENCH_CODE_1(runs);
     mayo_sign(p, sig, &len, m, m_len, sk);
     BENCH_CODE_2("mayo_sign", csv);
 
-    len = 32;
+    len = m_len;
     BENCH_CODE_1(runs);
-    mayo_open(p, m, &len, sig, PARAM_sig_bytes(p), pk);
+    mayo_open(p, m, &len, sig, PARAM_sig_bytes(p) + m_len, pk);
     BENCH_CODE_2("mayo_verify", csv);
 
     if (csv) {
