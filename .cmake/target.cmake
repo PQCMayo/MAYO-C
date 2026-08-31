@@ -54,6 +54,7 @@ endif()
 
 
 if (${MAYO_BUILD_TYPE} MATCHES "ref")
+  add_definitions(-DMAYO_BUILD_TYPE_GFNI)
   option(ENABLE_AESNI "Use AESni" OFF)
   option(ENABLE_PARAMS_DYNAMIC "Use dynamic parameters" ON)
   add_definitions(-DMAYO_BUILD_TYPE_REF)

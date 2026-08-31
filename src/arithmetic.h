@@ -77,7 +77,7 @@ static inline unsigned char ct_compare_8(unsigned char a, unsigned char b) {
 
 // GFNI backend, selected by MAYO_BUILD_TYPE=gfni. Needs AVX-512. The products pair
 // columns into 2x2 GF(16) blocks, two in and two out per affine (gfni_arithmetic.h).
-#if defined(MAYO_GFNI) && !(defined(__GFNI__) && defined(__AVX512F__) && defined(__AVX512BW__))
+#if defined(MAYO_GFNI) && !(defined(__GFNI__) && defined(__AVX512F__) && defined(__AVX512BW__) && defined(__AVX512DQ__))
     #error "MAYO_BUILD_TYPE=gfni requires GFNI and AVX-512F/BW (e.g. -march=icelake-server or -mgfni -mavx512f -mavx512bw)"
 #endif
 
