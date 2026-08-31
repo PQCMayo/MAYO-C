@@ -4,7 +4,7 @@ claimed-nist-level: 1
 length-public-key: 2928
 length-secret-key: 24
 length-signature: 239
-nistkat-sha256: d3e72d716831845a4b36cbd46f9cb518622faa1cbef46d90cf7cfa5edb3d501d
+nistkat-sha256: fd06cbf912ccf0d146760cb539149d536ac52c73192ad2fcd7957a3bc844cb69
 principal-submitters:
   - Ward Beullens
   - Fabio Campos
