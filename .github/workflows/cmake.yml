@@ -47,6 +47,13 @@ jobs:
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DMAYO_BUILD_TYPE=${{ matrix.mayo_build_type }}
 
+    - name: Show CPU and effective flags
+      working-directory: ${{github.workspace}}
+      run: |
+        grep -o -m1 -E 'gfni|avx512f|avx512bw|avx512dq|avx512vl' /proc/cpuinfo | sort -u
+        gcc -march=native -dM -E -x c /dev/null | grep -E '__AVX512|__GFNI__' | sort
+        grep C_FLAGS build/src/CMakeFiles/mayo_1.dir/flags.make
+
     - name: Build
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
