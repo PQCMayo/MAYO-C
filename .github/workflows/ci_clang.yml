@@ -18,15 +18,15 @@ jobs:
   # This workflow contains a single job called "build"
   ct:
     # The type of runner that the job will run on
-    #runs-on: ubuntu-latest
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
+    #runs-on: [self-hosted, Linux, X64]
     strategy:
         matrix:
           clang_config: [CTOS, CTO0, CTO2, CTO3, CTOSNOVEC, CTO0NOVEC, CTO2NOVEC, CTO3NOVEC]
           # Note: valgrind seems buggy with CT01 and CT01NOVEC, we skip them
           clang_version: [clang, clang-15, clang-18]
           mayo_build_type: [ref, opt, avx2]
-  
+
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
