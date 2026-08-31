@@ -36,8 +36,8 @@ jobs:
         with:
           python-version: "3.10"
 
-      #- name: Install dependencies
-      #  run: wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && wget https://apt.llvm.org/llvm.sh && sudo bash ./llvm.sh 18 && sudo apt update && sudo apt -y install build-essential valgrind cmake libboost-tools-dev libpthread-stubs0-dev libssl-dev clang-15 clang-18 clang gcc gcc-12
+      - name: Install dependencies
+        run: wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && wget https://apt.llvm.org/llvm.sh && sudo bash ./llvm.sh 18 && sudo apt update && sudo apt -y install build-essential valgrind cmake libboost-tools-dev libpthread-stubs0-dev libssl-dev clang-15 clang-18 clang gcc gcc-12
 
       - name: CT-Test (clang)
         run: |
