@@ -15,7 +15,7 @@ implementations:
   - name: opt
     version: round2
     folder_name: .
-    compile_opts: -DMAYO_VARIANT=MAYO_3 -DMAYO_BUILD_TYPE_OPT -DHAVE_RANDOMBYTES_NORETVAL -DHAVE_STACKEFFICIENT
+    compile_opts: -DMAYO_VARIANT=MAYO_3 -DMAYO_BUILD_TYPE_OPT -DHAVE_RANDOMBYTES_NORETVAL -DHAVE_STACKEFFICIENT -DAES_128_CTR=pqmayo_MAYO_3_opt_AES_128_CTR -DAES_128_ECB_C=pqmayo_MAYO_3_opt_AES_128_ECB_C
     signature_keypair: pqmayo_MAYO_3_opt_crypto_sign_keypair
     signature_signature: pqmayo_MAYO_3_opt_crypto_sign_signature
     signature_verify: pqmayo_MAYO_3_opt_crypto_sign_verify
@@ -23,7 +23,7 @@ implementations:
   - name: avx2
     version: round2
     folder_name: .
-    compile_opts: -DMAYO_VARIANT=MAYO_3 -DMAYO_BUILD_TYPE_AVX2 -DMAYO_AVX -DHAVE_RANDOMBYTES_NORETVAL
+    compile_opts: -DMAYO_VARIANT=MAYO_3 -DMAYO_BUILD_TYPE_AVX2 -DMAYO_AVX -DHAVE_RANDOMBYTES_NORETVAL -DAES_128_CTR=pqmayo_MAYO_3_avx2_AES_128_CTR -DAES_128_ECB_C=pqmayo_MAYO_3_avx2_AES_128_ECB_C
     signature_keypair: pqmayo_MAYO_3_avx2_crypto_sign_keypair
     signature_signature: pqmayo_MAYO_3_avx2_crypto_sign_signature
     signature_verify: pqmayo_MAYO_3_avx2_crypto_sign_verify
@@ -38,7 +38,7 @@ implementations:
   - name: neon
     version: round2
     folder_name: .
-    compile_opts: -DMAYO_VARIANT=MAYO_3 -DMAYO_BUILD_TYPE_NEON -DMAYO_NEON -DHAVE_RANDOMBYTES_NORETVAL
+    compile_opts: -DMAYO_VARIANT=MAYO_3 -DMAYO_BUILD_TYPE_NEON -DMAYO_NEON -DHAVE_RANDOMBYTES_NORETVAL -DAES_128_CTR=pqmayo_MAYO_3_neon_AES_128_CTR -DAES_128_ECB_C=pqmayo_MAYO_3_neon_AES_128_ECB_C
     signature_keypair: pqmayo_MAYO_3_neon_crypto_sign_keypair
     signature_signature: pqmayo_MAYO_3_neon_crypto_sign_signature
     signature_verify: pqmayo_MAYO_3_neon_crypto_sign_verify

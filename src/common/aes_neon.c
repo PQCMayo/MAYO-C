@@ -190,8 +190,9 @@ static void arm_aes128_ctr_enc_sch(const void *schedule, uint8_t *out,
 }
 
 int AES_128_CTR_NEON(unsigned char *output, size_t outputByteLen,
-                   const unsigned char *input) {
+                     const unsigned char *input, size_t inputByteLen) {
     void *schedule = NULL;
+    (void) inputByteLen;
     arm_aes128_load_schedule(input, &schedule);
     arm_aes128_ctr_enc_sch(schedule, output, outputByteLen);
     arm_aes128_free_schedule(schedule);
