@@ -8,14 +8,18 @@
 
 void AES_256_ECB(const uint8_t *input, const uint8_t *key, uint8_t *output);
 
-/* AES-128 ECB over whole blocks. The portable and AES-NI implementations agree
-   block for block, so the lambda keystream is backend independent. */
+/* AES-128 ECB over whole blocks. The portable, AES-NI and AES-NEON implementations
+   agree block for block, so the lambda keystream is backend independent. */
 int AES_128_ECB_C(unsigned char *output, const unsigned char *input, size_t nblocks,
                   const unsigned char *key);
 #ifdef ENABLE_AESNI
 int AES_128_ECB_NI(unsigned char *output, const unsigned char *input, size_t nblocks,
                    const unsigned char *key);
 #define AES_128_ECB AES_128_ECB_NI
+#elif defined(ENABLE_AESNEON)
+int AES_128_ECB_NEON(unsigned char *output, const unsigned char *input, size_t nblocks,
+                     const unsigned char *key);
+#define AES_128_ECB AES_128_ECB_NEON
 #else
 #define AES_128_ECB AES_128_ECB_C
 #endif
