@@ -199,4 +199,16 @@ int AES_128_CTR_NEON(unsigned char *output, size_t outputByteLen,
     return (int)outputByteLen;
 }
 
+/* AES-128 ECB over nblocks whole blocks; matches AES_128_ECB_C exactly. */
+int AES_128_ECB_NEON(unsigned char *output, const unsigned char *input, size_t nblocks,
+                     const unsigned char *key) {
+    void *schedule = NULL;
+    arm_aes128_load_schedule(key, &schedule);
+    for (size_t i = 0; i < nblocks; i++) {
+        arm_aes128_encrypt(schedule, vld1q_u8(input + 16 * i), output + 16 * i);
+    }
+    arm_aes128_free_schedule(schedule);
+    return (int)(nblocks * 16);
+}
+
 #endif
