@@ -109,10 +109,10 @@ static inline void EF(unsigned char *A, int nrows, int ncols) {
 
         // eliminate entries below pivot
         for (int row = pivot_row_lower_bound; row < nrows; row++) {
-            unsigned char below_pivot = (row > pivot_row);
+            unsigned char below_pivot = ct_compare_8(row > pivot_row, 0);
             unsigned char elt_to_elim = m_extract_element(packed_A + row * row_len, pivot_col);
 
-            vec_mul_add_u64(row_len, _pivot_row2, below_pivot * elt_to_elim,
+            vec_mul_add_u64(row_len, _pivot_row2, below_pivot & elt_to_elim,
                                     packed_A + row * row_len);                            
         }
 
