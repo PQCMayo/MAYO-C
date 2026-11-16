@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef SHUFFLE_ARITHMETIC_96_H
-#define SHUFFLE_ARITHMETIC_96_H
+#ifndef SHUFFLE_ARITHMETIC_H
+#define SHUFFLE_ARITHMETIC_H
 
 #include <arm_neon.h>
 #include <stdint.h>
 #include <stdalign.h>
+#include <string.h>
 #include <mayo.h>
 #include <arithmetic_common.h>
-#include <arithmetic_fixed.h>
+#include <m_vec_arithmetic.h>
 
 // P1/P2 are read straight from the packed keystream layout (m/2 bytes per m-vec),
 // skipping the unpack spread. PINV maps an m-vec index to its packed byte address --
@@ -21,7 +22,6 @@
 #define PINV(base, vec) ((const uint64_t *)((const uint8_t *)(base) + (size_t)(vec) * (size_t)(M_MAX / 2)))
 #endif
 
-#define O_NEON_ROUND_UP ((O_MAX + 1)/2*2)
 
 #define NEON_REGISTER_PER_M_VEC ((M_MAX + 31)/32)
 
@@ -35,7 +35,7 @@
 // multab storage, so callers can size buffers without knowing the engine
 typedef uint8x16_t mayo_multab_t;
 #define MAYO_V_MULTABS_N (((K_MAX + 1) / 2) * V_MAX)
-#define MAYO_O_MULTABS_N ((O_NEON_ROUND_UP / 2) * V_MAX)
+#define MAYO_O_MULTABS_N ((O_NEON_ROUND_UP_ / 2) * V_MAX)
 // select the multab sign orchestration in arithmetic.h
 #define MAYO_HAVE_MULTAB_SIGN 1
 
@@ -221,7 +221,7 @@ typedef uint8x16_t mayo_multab_t;
     NOT IMPLEMENTED
 #endif
 
-// P1*0 -> P1: v x v, O: v x o
+// P1 * O -> P2: P1 is v x v, O is v x o
 static
 inline void P1_times_O(const uint64_t *P1, uint8x16_t *O_multabs, uint64_t *acc){
     const uint8x16_t low_nibble_mask  = vdupq_n_u8( 0xf );
@@ -229,10 +229,10 @@ inline void P1_times_O(const uint64_t *P1, uint8x16_t *O_multabs, uint64_t *acc)
     for (size_t r = 0; r < V_MAX; r++)
     {
         // do multiplications for one row and accumulate results in temporary format
-        uint8x16_t temp[O_NEON_ROUND_UP*NEON_REGISTER_PER_M_VEC] = {0};
+        uint8x16_t temp[O_NEON_ROUND_UP_*NEON_REGISTER_PER_M_VEC] = {0};
         for (size_t c = r; c < V_MAX; c++)
         {
-            MULTIPLY_ACCUMULATE_M_VEC(PINV(P1, limbs_used), O_multabs + O_NEON_ROUND_UP/2*c, O_MAX);
+            MULTIPLY_ACCUMULATE_M_VEC(PINV(P1, limbs_used), O_multabs + O_NEON_ROUND_UP_/2*c, O_MAX);
             limbs_used += 1;
         }
         DISENTANGLE_AND_ACCUMULATE_M_VECS(O_MAX , acc + r*O_MAX*M_VEC_LIMBS_MAX, M_VEC_LIMBS_MAX);
@@ -245,10 +245,10 @@ inline void Ot_times_P1O_P2(const uint64_t *P1O_P2, uint8x16_t *O_multabs, uint6
     for (size_t c = 0; c < O_MAX; c++)
     {
         // do multiplications for one row and accumulate results in temporary format
-        uint8x16_t temp[O_NEON_ROUND_UP*NEON_REGISTER_PER_M_VEC] = {0};
+        uint8x16_t temp[O_NEON_ROUND_UP_*NEON_REGISTER_PER_M_VEC] = {0};
         for (size_t r = 0; r < V_MAX; r++)
         {
-            MULTIPLY_ACCUMULATE_M_VEC(P1O_P2 + (r*O_MAX + c)*M_VEC_LIMBS_MAX, O_multabs + O_NEON_ROUND_UP/2*r, O_MAX);
+            MULTIPLY_ACCUMULATE_M_VEC(P1O_P2 + (r*O_MAX + c)*M_VEC_LIMBS_MAX, O_multabs + O_NEON_ROUND_UP_/2*r, O_MAX);
         }
         DISENTANGLE_AND_ACCUMULATE_M_VECS(O_MAX , acc + c*M_VEC_LIMBS_MAX, O_MAX*M_VEC_LIMBS_MAX);
     }
@@ -259,29 +259,30 @@ inline void P1P1t_times_O(const mayo_params_t* p, const uint64_t *P1, const unsi
     (void) p;
     const uint8x16_t low_nibble_mask  = vdupq_n_u8( 0xf );
 
-    uint8x16_t O_multabs[O_NEON_ROUND_UP/2*V_MAX];
+    uint8x16_t O_multabs[MAYO_O_MULTABS_N];
     mayo_O_multabs(O, O_multabs);
 
     size_t cols_used = 0;
     for (size_t r = 0; r < V_MAX; r++)
     {
         // do multiplications for one row and accumulate results in temporary format
-        uint8x16_t temp[O_NEON_ROUND_UP*NEON_REGISTER_PER_M_VEC] = {0};
+        uint8x16_t temp[O_NEON_ROUND_UP_*NEON_REGISTER_PER_M_VEC] = {0};
         cols_used += 1;
         size_t pos = r;
         for (size_t c = 0; c < r; c++)
         {
-            MULTIPLY_ACCUMULATE_M_VEC(PINV(P1, pos), O_multabs + O_NEON_ROUND_UP/2*c, O_MAX);
+            MULTIPLY_ACCUMULATE_M_VEC(PINV(P1, pos), O_multabs + O_NEON_ROUND_UP_/2*c, O_MAX);
             pos += (V_MAX -c - 1);
         }
 
         for (size_t c = r+1; c < V_MAX; c++)
         {
-            MULTIPLY_ACCUMULATE_M_VEC(PINV(P1, cols_used), O_multabs + O_NEON_ROUND_UP/2*c, O_MAX);
+            MULTIPLY_ACCUMULATE_M_VEC(PINV(P1, cols_used), O_multabs + O_NEON_ROUND_UP_/2*c, O_MAX);
             cols_used ++;
         }
         DISENTANGLE_AND_ACCUMULATE_M_VECS(O_MAX, acc + r*O_MAX*M_VEC_LIMBS_MAX, M_VEC_LIMBS_MAX);
     }
+    mayo_secure_clear(O_multabs, sizeof(O_multabs));
 }
 
 static
@@ -325,6 +326,7 @@ inline void P1_times_Vt(const uint64_t *P1, uint8x16_t *V_multabs, uint64_t *acc
     {
         // do multiplications for one row and accumulate results in temporary format
         uint8x16_t temp[K_OVER_2*2*NEON_REGISTER_PER_M_VEC] = {0};
+        memset(acc + r*K_MAX*M_VEC_LIMBS_MAX, 0, K_MAX*M_VEC_LIMBS_MAX*sizeof(uint64_t)); // acc = P1 * V^t
 
         for (size_t c=r; c < V_MAX; c++)
         {
@@ -342,10 +344,10 @@ inline void P1_times_Vt(const uint64_t *P1, uint8x16_t *V_multabs, uint64_t *acc
 static inline void m_lambda_times_O(const uint64_t *lambda, const uint8x16_t *O_multabs,
                                     uint64_t *acc) {
     const uint8x16_t low_nibble_mask  = vdupq_n_u8( 0xf );
-    uint8x16_t temp[O_NEON_ROUND_UP*NEON_REGISTER_PER_M_VEC] = {0};
+    uint8x16_t temp[O_NEON_ROUND_UP_*NEON_REGISTER_PER_M_VEC] = {0};
     for (size_t r = 0; r < V_MAX; r++)
     {
-        MULTIPLY_ACCUMULATE_M_VEC(lambda + r * M_VEC_LIMBS_MAX, O_multabs + O_NEON_ROUND_UP/2*r, O_MAX);
+        MULTIPLY_ACCUMULATE_M_VEC(lambda + r * M_VEC_LIMBS_MAX, O_multabs + O_NEON_ROUND_UP_/2*r, O_MAX);
     }
     DISENTANGLE_AND_ACCUMULATE_M_VECS(O_MAX, acc, M_VEC_LIMBS_MAX);
 }
@@ -358,10 +360,10 @@ inline void Ut_times_O(const uint64_t *U, const uint8x16_t *O_multabs, uint64_t 
     for (size_t c = 0; c < K_MAX; c++)
     {
         // do multiplications for one row and accumulate results in temporary format
-        uint8x16_t temp[O_NEON_ROUND_UP*NEON_REGISTER_PER_M_VEC] = {0};
+        uint8x16_t temp[O_NEON_ROUND_UP_*NEON_REGISTER_PER_M_VEC] = {0};
         for (size_t r = 0; r < V_MAX; r++)
         {
-            MULTIPLY_ACCUMULATE_M_VEC(U + (r*K_MAX + c) * M_VEC_LIMBS_MAX, O_multabs + O_NEON_ROUND_UP/2*r, O_MAX);
+            MULTIPLY_ACCUMULATE_M_VEC(U + (r*K_MAX + c) * M_VEC_LIMBS_MAX, O_multabs + O_NEON_ROUND_UP_/2*r, O_MAX);
         }
         DISENTANGLE_AND_ACCUMULATE_M_VECS(O_MAX , acc + c*O_MAX*M_VEC_LIMBS_MAX, M_VEC_LIMBS_MAX);
     }
@@ -391,7 +393,7 @@ inline void P1t_times_Vt(const uint64_t *P1, uint8x16_t *V_multabs, uint64_t *ac
     }
 }
 
-// P1*S1 -> P1: v x v, S1: v x k // P1 upper triangular
+// S1^t * PS1: the same product as V * Pv
 static
 inline void S1t_times_PS1(const uint64_t *_PS1, uint8x16_t *S1_multabs, uint64_t *_acc){
     Vt_times_Pv(_PS1, S1_multabs, _acc);
@@ -414,7 +416,7 @@ inline void S2t_times_PS2(const uint64_t *PS2, uint8x16_t *S2_multabs, uint64_t 
 }
 
 
-// P2*S2 -> P2: v x o, S2: o x k
+// PS rows 0..v-1: P1 * S1 + P2 * S2
 static
 inline void P1_times_S1_plus_P2_times_S2(const uint64_t *P1, const uint64_t *P2, uint8x16_t *S1_multabs, uint8x16_t *S2_multabs, uint64_t *acc){
     const uint8x16_t low_nibble_mask  = vdupq_n_u8( 0xf );
@@ -464,27 +466,13 @@ inline void P3_times_S2(const uint64_t *P3, uint8x16_t *S2_multabs, uint64_t *ac
 }
 
 static inline
-void compute_M_and_VPV(const mayo_params_t* p, const unsigned char* Vdec, const uint64_t *L, const uint64_t *P1, uint64_t *VL, uint64_t *VP1V){
-    (void) p;
-    uint8x16_t V_multabs[(K_MAX+1)/2*V_MAX];
-    mayo_V_multabs(Vdec, V_multabs);
-
-    // M
-    Vt_times_L(L, V_multabs, VL);
-
-    // VP1V
-    uint64_t Pv[V_MAX * K_MAX * M_VEC_LIMBS_MAX] = {0};
-    P1_times_Vt(P1, V_multabs, Pv);
-    Vt_times_Pv(Pv, V_multabs, VP1V);
-}
-
-static inline
 void compute_P3(const mayo_params_t* p, const uint64_t* P1, uint64_t *P2, const unsigned char *O, uint64_t *P3){
     (void) p;
-    uint8x16_t O_multabs[O_NEON_ROUND_UP/2*V_MAX];
+    uint8x16_t O_multabs[MAYO_O_MULTABS_N];
     mayo_O_multabs(O, O_multabs);
     P1_times_O(P1, O_multabs, P2);
     Ot_times_P1O_P2(P2, O_multabs, P3);
+    mayo_secure_clear(O_multabs, sizeof(O_multabs));
 }
 
 // compute P * S^t = [ P1  P2 ] * [S1] = [P1*S1 + P2*S2]
@@ -498,7 +486,6 @@ static inline void m_calculate_PS_SPS(const mayo_params_t *p, const uint64_t *P1
     const int v = PARAM_NAME(v);
     const int k = PARAM_NAME(k);
     const int n = o + v;
-    /* Old approach which is constant time but doesn't have to be */
     unsigned char S1[V_MAX*K_MAX]; // == N-O, K
     unsigned char S2[O_MAX*K_MAX]; // == O, K
     unsigned char *s1_write = S1;
@@ -517,12 +504,11 @@ static inline void m_calculate_PS_SPS(const mayo_params_t *p, const uint64_t *P1
     }
 
     alignas(64) uint64_t PS[N_MAX * K_MAX * M_VEC_LIMBS_MAX] = { 0 };
-    (void) PS;
 
     uint8x16_t S1_multabs[(K_MAX+1)/2*V_MAX];
     uint8x16_t S2_multabs[(K_MAX+1)/2*O_MAX];
-    mayo_S1_multabs(S1, S1_multabs);
-    mayo_S2_multabs(S2, S2_multabs);
+    mayo_S_multabs(S1, V_MAX, S1_multabs);
+    mayo_S_multabs(S2, O_MAX, S2_multabs);
 
     P1_times_S1_plus_P2_times_S2(P1, P2, S1_multabs, S2_multabs, PS);
     P3_times_S2(P3, S2_multabs, PS + V_MAX*K_MAX*M_VEC_LIMBS_MAX); // upper triangular

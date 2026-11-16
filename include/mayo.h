@@ -17,7 +17,6 @@ typedef struct mayo_params_t {
     int n;
     int o;
     int k;
-    int q;
     const unsigned char *f_tail;
     const unsigned char *whip_pos;
     int m_bytes;
@@ -26,7 +25,6 @@ typedef struct mayo_params_t {
     int r_bytes;
     int P1_bytes;
     int P2_bytes;
-    int P3_bytes;
     int csk_bytes;
     int cpk_bytes;
     int sig_bytes;
@@ -229,15 +227,14 @@ int mayo_expand_sk(const mayo_params_t *p, const unsigned char *csk,
 /**
  * Mayo verify signature.
  *
- * The implementation performs Mayo.verify(). If the signature verification succeeded, returns 0, otherwise 1.
- * Keys provided is a compact public key.
+ * The implementation performs Mayo.verify(). Keys provided is a compact public key.
  *
  * @param[in] p Mayo parameter set
- * @param[out] m Message stored if verification succeeds
- * @param[out] mlen Pointer to the length of m
+ * @param[in] m Message
+ * @param[in] mlen Message length
  * @param[in] sig Signature
  * @param[in] pk Compacted public key
- * @return int 0 if verification succeeded, 1 otherwise.
+ * @return int MAYO_OK if verification succeeded, MAYO_ERR otherwise.
  */
 #define mayo_verify MAYO_NAMESPACE(mayo_verify)
 int mayo_verify(const mayo_params_t *p, const unsigned char *m,
@@ -256,7 +253,7 @@ int mayo_verify(const mayo_params_t *p, const unsigned char *m,
  * @param[in] mlen Message length
  * @param[in] sig Signature
  * @param[in] epk Expanded public key (from mayo_expand_pk)
- * @return int 0 if verification succeeded, 1 otherwise.
+ * @return int MAYO_OK if verification succeeded, MAYO_ERR otherwise.
  */
 #define mayo_verify_epk MAYO_NAMESPACE(mayo_verify_epk)
 int mayo_verify_epk(const mayo_params_t *p, const unsigned char *m,
@@ -275,7 +272,7 @@ int mayo_verify_epk(const mayo_params_t *p, const unsigned char *m,
  * @param[in]  sm    Signature concatenated with message
  * @param[in]  smlen Length of sm
  * @param[in]  epk   Expanded public key (from mayo_expand_pk)
- * @return int 0 if verification succeeded, 1 otherwise.
+ * @return int MAYO_OK if verification succeeded, MAYO_ERR otherwise.
  */
 #define mayo_open_epk MAYO_NAMESPACE(mayo_open_epk)
 int mayo_open_epk(const mayo_params_t *p, unsigned char *m,

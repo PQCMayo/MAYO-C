@@ -1,51 +1,45 @@
 # SPDX-License-Identifier: Apache-2.0
 
+# One set of test binaries, on the libraries LIB (system randomness) and LIB_TEST
+# (deterministic randomness, for the KATs).
+function(mayo_test_binaries SUFFIX LIB LIB_TEST)
+    add_executable(mayo_test_kat${SUFFIX} test_kat.c)
+    target_link_libraries(mayo_test_kat${SUFFIX} ${LIB_TEST})
+
+    add_executable(mayo_bench${SUFFIX} bench.c m1cycles.c)
+    target_link_libraries(mayo_bench${SUFFIX} ${LIB})
+
+    add_executable(mayo_test_scheme${SUFFIX} test_mayo.c)
+    target_link_libraries(mayo_test_scheme${SUFFIX} ${LIB})
+    target_include_directories(mayo_test_scheme${SUFFIX} PUBLIC ../src/common ${INC_PLATFORM})
+
+    add_executable(mayo_test_various${SUFFIX} test_various.c)
+    target_link_libraries(mayo_test_various${SUFFIX} ${LIB})
+    target_include_directories(mayo_test_various${SUFFIX} PUBLIC ../src/common ../src/generic ${INC_PLATFORM})
+endfunction()
+
+# With dynamic parameters one set of binaries serves every parameter set, which is
+# passed as an argument; otherwise every parameter set gets its own binaries.
 if (ENABLE_PARAMS_DYNAMIC)
-    add_executable(mayo_test_kat test_kat.c)
-    target_link_libraries(mayo_test_kat mayo_test)
-
-    add_executable(mayo_bench bench.c m1cycles.c)
-    target_link_libraries(mayo_bench mayo)
-
-    add_executable(mayo_test_scheme test_mayo.c)
-    target_link_libraries(mayo_test_scheme mayo)
-    target_include_directories(mayo_test_scheme PUBLIC ../src/common)
-
-    add_test(MAYO_1_KAT mayo_test_kat MAYO-1)
-    add_test(MAYO_2_KAT mayo_test_kat MAYO-2)
-    add_test(MAYO_3_KAT mayo_test_kat MAYO-3)
-    add_test(MAYO_5_KAT mayo_test_kat MAYO-5)
-    add_test(MAYO_1_SELFTEST mayo_test_scheme MAYO-1)
-    add_test(MAYO_2_SELFTEST mayo_test_scheme MAYO-2)
-    add_test(MAYO_3_SELFTEST mayo_test_scheme MAYO-3)
-    add_test(MAYO_5_SELFTEST mayo_test_scheme MAYO-5)
-else()
-    FOREACH(MVARIANT ${MVARIANT_S})
-        string(TOLOWER ${MVARIANT} MVARIANT_LOWER)
-        add_executable(mayo_test_kat_${MVARIANT} test_kat.c)
-        target_link_libraries(mayo_test_kat_${MVARIANT} ${MVARIANT_LOWER}_test)
-
-        add_executable(mayo_bench_${MVARIANT} bench.c m1cycles.c)
-        target_link_libraries(mayo_bench_${MVARIANT} ${MVARIANT_LOWER})
-
-        add_executable(mayo_test_scheme_${MVARIANT} test_mayo.c)
-        target_link_libraries(mayo_test_scheme_${MVARIANT} ${MVARIANT_LOWER})
-        target_include_directories(mayo_test_scheme_${MVARIANT} PUBLIC ../src/common ${INC_PLATFORM})
-
-        add_executable(mayo_test_sample_solution_${MVARIANT} test_sample_solution.c)
-        target_link_libraries(mayo_test_sample_solution_${MVARIANT} ${MVARIANT_LOWER}_test_nistapi)
-        target_include_directories(mayo_test_sample_solution_${MVARIANT} PRIVATE ../include ../src/${MVARIANT_LOWER})
-
-        add_executable(mayo_test_various_${MVARIANT} test_various.c)
-        target_link_libraries(mayo_test_various_${MVARIANT} ${MVARIANT_LOWER})
-
-        target_include_directories(mayo_test_various_${MVARIANT} PUBLIC ../src/common ../src/generic ${INC_PLATFORM})
-
-        add_test(${MVARIANT}_KAT mayo_test_kat_${MVARIANT} ${MVARIANT})
-        add_test(${MVARIANT}_SELFTEST mayo_test_scheme_${MVARIANT} ${MVARIANT})
-        add_test(${MVARIANT}_VARIOUS mayo_test_various_${MVARIANT} ${MVARIANT})
-        add_test(${MVARIANT}_SAMPLE_SOLUTION mayo_test_sample_solution_${MVARIANT})
-    ENDFOREACH()
-
+    mayo_test_binaries("" mayo mayo_test)
 endif()
 
+foreach(MVARIANT ${MVARIANT_S})
+    string(TOLOWER ${MVARIANT} MVARIANT_LOWER)
+    string(REPLACE "_" "-" MVARIANT_ARG ${MVARIANT})
+    if (ENABLE_PARAMS_DYNAMIC)
+        set(SUFFIX "")
+    else()
+        set(SUFFIX _${MVARIANT})
+        mayo_test_binaries(${SUFFIX} ${MVARIANT_LOWER} ${MVARIANT_LOWER}_test)
+    endif()
+
+    add_executable(mayo_test_sample_solution_${MVARIANT} test_sample_solution.c)
+    target_link_libraries(mayo_test_sample_solution_${MVARIANT} ${MVARIANT_LOWER}_test_nistapi)
+    target_include_directories(mayo_test_sample_solution_${MVARIANT} PRIVATE ../include ../src/${MVARIANT_LOWER})
+
+    add_test(${MVARIANT}_KAT mayo_test_kat${SUFFIX} ${MVARIANT_ARG})
+    add_test(${MVARIANT}_SELFTEST mayo_test_scheme${SUFFIX} ${MVARIANT_ARG})
+    add_test(${MVARIANT}_VARIOUS mayo_test_various${SUFFIX} ${MVARIANT_ARG})
+    add_test(${MVARIANT}_SAMPLE_SOLUTION mayo_test_sample_solution_${MVARIANT})
+endforeach()

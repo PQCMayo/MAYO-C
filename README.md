@@ -36,9 +36,10 @@ The following build options have been used to report performance numbers in the 
 2. Optimized (AES-NI enabled): `cmake -DMAYO_BUILD_TYPE=opt -DENABLE_AESNI=ON ..`
 3. Optimized (AES-NI disabled): `cmake -DMAYO_BUILD_TYPE=opt -DENABLE_AESNI=OFF ..`
 4. AVX2: `cmake -DMAYO_BUILD_TYPE=avx2 -DENABLE_AESNI=ON ..`
-5. AVX-512 + GFNI: `cmake -DMAYO_BUILD_TYPE=gfni -DENABLE_AESNI=ON ..`
-6. A64 M1/M2/M3 NEON: `cmake -DMAYO_BUILD_TYPE=neon -DENABLE_AESNEON=ON ..`
-7. A64 RPi4 Cortex-A72 NEON: `cmake -DMAYO_BUILD_TYPE=neon -DENABLE_AESNEON=OFF ..`
+5. AVX2 + GFNI: `cmake -DMAYO_BUILD_TYPE=avx2_gfni -DENABLE_AESNI=ON ..`
+6. AVX-512 + GFNI: `cmake -DMAYO_BUILD_TYPE=avx512_gfni -DENABLE_AESNI=ON ..`
+7. A64 M1/M2/M3 NEON: `cmake -DMAYO_BUILD_TYPE=neon -DENABLE_AESNEON=ON ..`
+8. A64 RPi4 Cortex-A72 NEON: `cmake -DMAYO_BUILD_TYPE=neon -DENABLE_AESNEON=OFF ..`
 
 ## Build options
 
@@ -62,15 +63,16 @@ Builds the library in strict mode: warnings terminate compilation). The default 
 
 ### MAYO_BUILD_TYPE
 
-Specifies the build type for which Mayo is built. The options are `ref`, `opt`, `avx2`, `gfni` and `neon`. The effect is the following:
+Specifies the implementation that is built. Leave it unset to get the fastest one the compiler can target (see below). The options are `ref`, `opt`, `avx2`, `avx2_gfni`, `avx512_gfni`, `neon` and `auto`. The effect is the following:
 
 - `ref` builds MAYO implemented with portable C code for native target architecture, using run-time parameters.
 - `opt` builds MAYO implemented with optimized portable C code, compiled with `-march=native` (if available) and AES acceleration (if available)
 - `avx2` builds MAYO implemented with optimized AVX2 code, compiled with `-march=native` (if available) and AES acceleration (if available)
-- `gfni` builds MAYO implemented with optimized AVX-512 and GFNI code, compiled with `-march=native` (if available) and AES acceleration (if available). This requires a host CPU supporting AVX-512 and GFNI; where VAES is also present, AES-CTR uses the 512-bit VAES path.
+- `avx2_gfni` builds MAYO with GF(16) arithmetic on GFNI instructions in 256-bit registers, compiled with `-march=native` (if available) and AES acceleration (if available). This requires AVX2 and GFNI (e.g. Intel Ice Lake, Alder Lake and later, AMD Zen 4 and later).
+- `avx512_gfni` builds the same GFNI code on 512-bit registers. This requires AVX-512F/BW and GFNI; where VAES is also present, AES-CTR uses the 512-bit VAES path. `gfni` is accepted as an older name for it.
 - `neon` builds MAYO implemented with optimized NEON code, compiled with `-march=native` (if available) and AES acceleration (if available)
 
-The default build type if none is specified is `opt`.
+If `MAYO_BUILD_TYPE` is not given (or is `auto`), it is the first of `avx512_gfni`, `avx2_gfni`, `avx2`, `neon` and `opt` that the compiler can target with the compile flags (`-march=native`, or `MAYO_MARCH` if given), and the choice is printed. Set it explicitly to build a particular implementation, e.g. for benchmarking or debugging.
 
 ### CMAKE_BUILD_TYPE
 
@@ -94,10 +96,10 @@ The following artifacts are built:
 - `libmayo_<level>_nistapi.a`: library for `MAYO_<level>` against the NIST API.
 - `libmayo_<level>_nistapi_test.a`: library for `MAYO_<level>` against the NIST API. Only for test, using the deterministic CTR-DRBG as backend.
 - `mayo_bench_<param>`: Benchmarking suites.
-- `mayo_test_kat_<param>` (`opt`, `avx2`, `gfni` and `neon`), `mayo_test_kat` (`ref`): KAT test suites.
-- `mayo_test_scheme_<param>` (`opt`, `avx2`, `gfni` and `neon`), `mayo_test_scheme` (`ref`): Self-test suites.
+- `mayo_test_kat_<param>` (all build types except `ref`), `mayo_test_kat` (`ref`): KAT test suites.
+- `mayo_test_scheme_<param>` (all build types except `ref`), `mayo_test_scheme` (`ref`): Self-test suites.
 - `PQCgenKAT_sign_<param>`: App for generating NIST KAT.
-- `example_<param>` (`opt`, `avx2`, `gfni` and `neon`), `example_mayo` (`ref`): Example app using the MAYO API.
+- `example_<param>` (all build types except `ref`), `example_mayo` (`ref`): Example app using the MAYO API.
 - `example_nistapi_<param>`: Example app using the NIST API.
 
 ## Test
@@ -126,7 +128,7 @@ KAT verification is done as part of the test harness (see previous section).
 
 A benchmarking suite is built and runs with the following command, where `params` specifies the MAYO parameter set and `runs` the number of benchmark runs:
 
-If `MAYO_BUILD_TYPE` is `opt`, `avx2`, `gfni` or `neon`:
+If `MAYO_BUILD_TYPE` is not `ref`:
 - `test/mayo_bench_<param> <runs>`,
 - On Apple M1/M2/M3 chips, this must be run with root (`sudo`) permission.
 

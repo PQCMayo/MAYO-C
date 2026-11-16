@@ -4,6 +4,9 @@
 #define SIMPLE_ARITHMETIC_H
 #include <mem.h>
 
+#define MAYO_MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MAYO_MIN(x, y) (((x) < (y)) ? (x) : (y))
+
 // GF(16) multiplication mod x^4 + x + 1
 static inline unsigned char mul_f(unsigned char a, unsigned char b) {
     // carryless multiply
@@ -48,11 +51,6 @@ static inline unsigned char sub_f(unsigned char a, unsigned char b) {
     return a ^ b;
 }
 
-// GF(16) negation
-static inline unsigned char neg_f(unsigned char a) {
-    return a;
-}
-
 static inline unsigned char inverse_f(unsigned char a) {
     // static unsigned char table[16] = {0, 1, 9, 14, 13, 11, 7, 6, 15, 2, 12, 5,
     // 10, 4, 3, 8}; return table[a & 15];
@@ -91,35 +89,6 @@ static inline void mat_add(const unsigned char *a, const unsigned char *b,
             *(c + i * n + j) = add_f(*(a + i * n + j), *(b + i * n + j));
         }
     }
-}
-
-static inline uint64_t gf16v_mul_u64( uint64_t a, uint8_t b ) {
-    uint64_t mask_msb = 0x8888888888888888ULL;
-    uint64_t a_msb;
-    uint64_t a64 = a;
-#if !(((defined(__clang__) && __clang_major__ < 15) || (!defined(__clang__) && defined(__GNUC__) && __GNUC__ <= 12)) && (defined(__x86_64__) || defined(_M_X64)))
-    uint64_t b32 = b ^ unsigned_char_blocker;
-#else
-    uint64_t b32 = b;
-#endif
-    uint64_t r64 = a64 * (b32 & 1);
-
-    a_msb = a64 & mask_msb; // MSB, 3rd bits
-    a64 ^= a_msb;   // clear MSB
-    a64 = (a64 << 1) ^ ((a_msb >> 3) * 3);
-    r64 ^= (a64) * ((b32 >> 1) & 1);
-
-    a_msb = a64 & mask_msb; // MSB, 3rd bits
-    a64 ^= a_msb;   // clear MSB
-    a64 = (a64 << 1) ^ ((a_msb >> 3) * 3);
-    r64 ^= (a64) * ((b32 >> 2) & 1);
-
-    a_msb = a64 & mask_msb; // MSB, 3rd bits
-    a64 ^= a_msb;   // clear MSB
-    a64 = (a64 << 1) ^ ((a_msb >> 3) * 3);
-    r64 ^= (a64) * ((b32 >> 3) & 1);
-
-    return r64;
 }
 
 // This implements arithmetic for nibble-packed vectors of m field elements in Z_2[x]/(x^4+x+1)

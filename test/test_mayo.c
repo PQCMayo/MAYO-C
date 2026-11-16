@@ -7,31 +7,12 @@
 #include <randombytes.h>
 #include <mayo.h>
 #include <stdalign.h>
+#include "test_util.h"
 
 #ifdef ENABLE_CT_TESTING
 #include <valgrind/memcheck.h>
 #endif
 
-#ifdef ENABLE_CT_TESTING
-static void print_hex(const unsigned char *hex, int len) {
-    unsigned char *copy  = calloc(len, 1);
-    memcpy(copy, hex, len); // make a copy that we can tell valgrind is okay to leak
-    VALGRIND_MAKE_MEM_DEFINED(copy, len);
-
-    for (int i = 0; i < len;  ++i) {
-        printf("%02x", copy[i]);
-    }
-    printf("\n");
-    free(copy);
-}
-#else
-static void print_hex(const unsigned char *hex, int len) {
-    for (int i = 0; i < len;  ++i) {
-        printf("%02x", hex[i]);
-    }
-    printf("\n");
-}
-#endif
 
 
 static int test_mayo(const mayo_params_t *p) {
@@ -78,11 +59,11 @@ static int test_mayo(const mayo_params_t *p) {
     }
 
     printf("pk: ");
-    print_hex(pk, PARAM_cpk_bytes(p));
+    print_hex(pk, PARAM_cpk_bytes(p), 0);
     printf("sk: ");
-    print_hex(sk, PARAM_csk_bytes(p));
+    print_hex(sk, PARAM_csk_bytes(p), 0);
     printf("sm: ");
-    print_hex(sig, smlen);
+    print_hex(sig, smlen, 0);
 
 #ifdef ENABLE_CT_TESTING
     VALGRIND_MAKE_MEM_DEFINED(sig, smlen);
@@ -173,28 +154,14 @@ err:
 }
 
 int main(int argc, char *argv[]) {
-    int rc = 0;
-
-#ifdef ENABLE_PARAMS_DYNAMIC
-    if (!strcmp(argv[1], "MAYO-1")) {
-        rc = test_mayo(&MAYO_1);
-    } else if (!strcmp(argv[1], "MAYO-2")) {
-        rc = test_mayo(&MAYO_2);
-    } else if (!strcmp(argv[1], "MAYO-3")) {
-        rc = test_mayo(&MAYO_3);
-    } else if (!strcmp(argv[1], "MAYO-5")) {
-        rc = test_mayo(&MAYO_5);
-    } else {
-        printf("unknown parameter set\n");
+    const mayo_params_t *p;
+    if (mayo_params_from_args(argc, argv, &p)) {
         return MAYO_ERR;
     }
-#else
-    rc = test_mayo(NULL);
-#endif
 
+    int rc = test_mayo(p);
     if (rc != MAYO_OK) {
-        printf("test failed for %s\n", argv[1]);
+        printf("test failed\n");
     }
     return rc;
 }
-

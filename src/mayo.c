@@ -14,7 +14,6 @@
 #include <valgrind/memcheck.h>
 #endif
 
-#define MAYO_MIN(x, y) (((x) < (y)) ? (x) : (y))
 #define PK_PRF AES_128_CTR
 
 static void decode(const unsigned char *m, unsigned char *mdec, int mdeclen) {
@@ -40,27 +39,29 @@ static void encode(const unsigned char *m, unsigned char *menc, int mlen) {
     }
 }
 
-static void compute_rhs(const mayo_params_t *p, uint64_t *vPv, const unsigned char *t, unsigned char *y){
-    #ifndef ENABLE_PARAMS_DYNAMIC
+#ifdef TARGET_BIG_ENDIAN
+// convert n limbs between their in-memory byte order and the little-endian one
+static void bswap_limbs(uint64_t *limbs, size_t n) {
+    for (size_t i = 0; i < n; ++i) {
+        limbs[i] = BSWAP64(limbs[i]);
+    }
+}
+#endif
+
+/* y = t - (the whipped sum of vPv), with t nibble-packed as SHAKE outputs it: element 2j
+   in the low and 2j+1 in the high nibble of byte j, the layout temp's bytes have too. */
+static void compute_rhs(const mayo_params_t *p, const uint64_t *vPv, const unsigned char *t, unsigned char *y){
     (void) p;
-    #endif
 
     const size_t top_pos = ((PARAM_m(p) - 1) % 16) * 4;
     const size_t m_vec_limbs = PARAM_m_vec_limbs(p);
 
-    // zero out tails of m_vecs if neccesary
-    if(PARAM_m(p) % 16 != 0){
-        uint64_t mask = 1;
-        mask <<= ((PARAM_m(p) % 16)*4);
-        mask -= 1;
-        for (int i = 0; i < PARAM_k(p)*PARAM_k(p); i++)
-        {
-            vPv[i*m_vec_limbs + m_vec_limbs - 1] &= mask;
-        }
-    }
-
     uint64_t temp[M_VEC_LIMBS_MAX] = {0};
     unsigned char *temp_bytes = (unsigned char *) temp;
+    uint64_t ftail = 0; // tap jj in nibble jj of limb 0
+    for (int jj = 0; jj < F_TAIL_LEN; jj++) {
+        ftail |= (uint64_t) PARAM_f_tail(p)[jj] << (4 * jj);
+    }
     // Horner in z over the whipping schedule: visiting the labels from the
     // highest exponent down leaves the term of label l multiplied by z^l
     const unsigned char *whip_positions = PARAM_whip_pos(p);
@@ -73,78 +74,42 @@ static void compute_rhs(const mayo_params_t *p, uint64_t *vPv, const unsigned ch
             temp[k+1] ^= temp[k] >> 60;
             temp[k] <<= 4;
         }
-        // reduce mod f(X): tap jj lands in the low or high nibble of byte jj/2
-        for (int jj = 0; jj < F_TAIL_LEN; jj++) {
-            temp_bytes[MAYO_LIMB_BYTE(jj/2)] ^= mul_f(top, PARAM_f_tail(p)[jj]) << (4 * (jj % 2));
-        }
+        // reduce mod f(X): all taps in one nibble-sliced multiply
+        vec_mul_add_u64(1, &ftail, top, temp);
 
-        // extract from vPv and add
+        // extract from vPv and add; row and col are public
         for(size_t k=0; k < m_vec_limbs; k ++){
-            temp[k] ^= vPv[( row * PARAM_k(p) + col )* m_vec_limbs + k] ^ ((row!=col)*vPv[( col * PARAM_k(p) + row )* m_vec_limbs + k]);
+            temp[k] ^= vPv[( row * PARAM_k(p) + col )* m_vec_limbs + k];
+        }
+        if (row != col) {
+            for(size_t k=0; k < m_vec_limbs; k ++){
+                temp[k] ^= vPv[( col * PARAM_k(p) + row )* m_vec_limbs + k];
+            }
         }
     }
 
     // compute y
     for (int i = 0; i < PARAM_m(p); i+=2)
     {
-        y[i]   = t[i]   ^ (temp_bytes[MAYO_LIMB_BYTE(i/2)] & 0xF);
-        y[i+1] = t[i+1] ^ (temp_bytes[MAYO_LIMB_BYTE(i/2)] >> 4);
+        const unsigned char b = t[i/2] ^ temp_bytes[MAYO_LIMB_BYTE(i/2)];
+        y[i]   = b & 0xF;
+        y[i+1] = b >> 4;
     }
+    mayo_secure_clear(temp, sizeof(temp));   /* from vPv: secret when signing */
 }
 
-static void transpose_16x16_nibbles(uint64_t *M){
-    static const uint64_t even_nibbles = 0x0f0f0f0f0f0f0f0f;
-    static const uint64_t even_bytes   = 0x00ff00ff00ff00ff;
-    static const uint64_t even_2bytes  = 0x0000ffff0000ffff;
-    static const uint64_t even_half    = 0x00000000ffffffff;
-
-    for (size_t i = 0; i < 16; i+=2)
-    {
-        uint64_t t = ((M[i] >> 4 ) ^ M[i+1]) & even_nibbles;
-        M[i  ] ^= t << 4;
-        M[i+1] ^= t;
-    }
-
-    for (size_t i = 0; i < 16; i+=4)
-    {
-        uint64_t t0 = ((M[i  ] >> 8) ^ M[i+2]) & even_bytes;
-        uint64_t t1 = ((M[i+1] >> 8) ^ M[i+3]) & even_bytes;
-        M[i  ] ^= (t0 << 8);
-        M[i+1] ^= (t1 << 8);
-        M[i+2] ^= t0;
-        M[i+3] ^= t1;
-    }
-
-    for (size_t i = 0; i < 4; i++)
-    {
-        uint64_t t0 = ((M[i  ] >> 16) ^ M[i+ 4]) & even_2bytes;
-        uint64_t t1 = ((M[i+8] >> 16) ^ M[i+12]) & even_2bytes;
-
-        M[i   ] ^= t0 << 16;
-        M[i+ 8] ^= t1 << 16;
-        M[i+ 4] ^= t0;
-        M[i+12] ^= t1;
-    }
-
-    for (size_t i = 0; i < 8; i++)
-    {
-        uint64_t t = ((M[i]>>32) ^ M[i+8]) & even_half;
-        M[i  ] ^= t << 32;
-        M[i+8] ^= t;
-    }
-}
 
 #define MAYO_M_OVER_8 ((M_MAX + 7) / 8)
 static void compute_A(const mayo_params_t *p, uint64_t *VtL, unsigned char *A_out) {
-    #ifndef ENABLE_PARAMS_DYNAMIC
     (void) p;
-    #endif
 
     const int m_vec_limbs = PARAM_m_vec_limbs(p);
     uint64_t A[(((O_MAX*K_MAX+15)/16)*16)*MAYO_M_OVER_8] = {0};
     size_t A_width = ((PARAM_o(p)*PARAM_k(p) + 15)/16)*16;
 
-    // zero out tails of m_vecs if neccesary
+    /* zero the unused nibbles above m in each m_vec: the vector backends leave garbage
+       there, and the rows it would be shifted into are folded into the valid rows by
+       the f_tail reduction below */
     if(PARAM_m(p) % 16 != 0){
         uint64_t mask = 1;
         mask <<= (PARAM_m(p) % 16)*4;
@@ -157,21 +122,22 @@ static void compute_A(const mayo_params_t *p, uint64_t *VtL, unsigned char *A_ou
 
     /* the whipping schedule puts the pair of label l at row offset l, i.e. a shift
        of l nibbles: l/16 whole limb-rows plus 4*(l%16) bits within a limb */
+    /* label l adds M_col at columns o*row and (off the diagonal) M_row at o*col, so
+       collect each block's uses and hand them over together */
     const unsigned char *whip_positions = PARAM_whip_pos(p);
+    int use_row0[K_MAX][K_MAX], use_col[K_MAX][K_MAX], use_bits[K_MAX][K_MAX], nuse[K_MAX] = {0};
     for (int l = 0; l < PARAM_k(p) * (PARAM_k(p) + 1) / 2; l++) {
         const int row = whip_positions[2*l], col = whip_positions[2*l + 1];
-        const int words_to_shift = l / 16;
-        const int bits_to_shift = 4 * (l % 16);
-
-        // add the M_row and M_col to A, shifted "down" by l positions
-        m_compute_A_acc(A, A_width, words_to_shift, PARAM_o(p) * row,
-                        VtL + (size_t) col * m_vec_limbs * PARAM_o(p),
-                        PARAM_o(p), m_vec_limbs, bits_to_shift);
-        if (row != col) {
-            m_compute_A_acc(A, A_width, words_to_shift, PARAM_o(p) * col,
-                            VtL + (size_t) row * m_vec_limbs * PARAM_o(p),
-                            PARAM_o(p), m_vec_limbs, bits_to_shift);
+        for (int e = 0; e < (row != col ? 2 : 1); e++) {
+            const int j = e ? row : col, at = e ? col : row;
+            use_row0[j][nuse[j]] = l / 16;
+            use_col[j][nuse[j]] = PARAM_o(p) * at;
+            use_bits[j][nuse[j]++] = 4 * (l % 16);
         }
+    }
+    for (int j = 0; j < PARAM_k(p); j++) {
+        m_compute_A_block(A, A_width, VtL + (size_t) j * m_vec_limbs * PARAM_o(p), PARAM_o(p),
+                          m_vec_limbs, nuse[j], use_row0[j], use_col[j], use_bits[j]);
     }
 
     for (size_t c = 0; c < A_width*((PARAM_m(p) + (PARAM_k(p)+1)*PARAM_k(p)/2 +15)/16) ; c+= 16)
@@ -180,12 +146,16 @@ static void compute_A(const mayo_params_t *p, uint64_t *VtL, unsigned char *A_ou
     }
 
     /* the tail rows reduce into the rows below them, one GF(16) multiply per tap. A's
-       rows sit sixteen to a block, so copy the sources out and the destinations back and
-       let each tap run over contiguous words. */
+       rows sit sixteen to a block, so copy the sources out and the destinations back, in
+       whole blocks, and let each tap run over contiguous words. */
     #define FTAIL_ROWS ((K_MAX + 1) * K_MAX / 2)
-    uint64_t ft_src[FTAIL_ROWS];
-    uint64_t ft_dst[FTAIL_ROWS + F_TAIL_LEN];
+    #define FT_BLOCKS(n) (((n) + 15) / 16 * 16)
+    uint64_t ft_src[FT_BLOCKS(FTAIL_ROWS + 15)];        // from row m rounded down to a block
+    uint64_t ft_dst[FT_BLOCKS(FTAIL_ROWS + F_TAIL_LEN)];
     const int ftail_rows = (PARAM_k(p) + 1) * PARAM_k(p) / 2;
+    const int src_off = PARAM_m(p) % 16, src_block = PARAM_m(p) / 16;
+    const int src_words = FT_BLOCKS(src_off + ftail_rows);
+    const int dst_words = FT_BLOCKS(ftail_rows + F_TAIL_LEN - 1); // the extra rows get zeros
     /* only the table-driven backends read this; gfni folds its matrix from the
        coefficient, and building it there costs more than the loop it feeds */
     unsigned char ftab[F_TAIL_LEN][16] = {{0}};
@@ -198,27 +168,28 @@ static void compute_A(const mayo_params_t *p, uint64_t *VtL, unsigned char *A_ou
 #endif
     for (size_t c = 0; c < A_width; c+= 16)
     {
-        for (int i = 0; i < ftail_rows; i++) {
-            const int r = PARAM_m(p) + i;
-            ft_src[i] = A[(r / 16) * A_width + c + (r % 16)];
+        for (int b = 0; b < src_words; b += 16) {
+            memcpy(ft_src + b, A + (size_t) (src_block + b / 16) * A_width + c, 16 * sizeof(uint64_t));
         }
-        for (int i = 0; i < ftail_rows + F_TAIL_LEN; i++) {
-            ft_dst[i] = 0;
-        }
+        memset(ft_dst, 0, dst_words * sizeof(uint64_t));
         for (int t = 0; t < F_TAIL_LEN; t++) {
-            m_gf16_mulc_xor(ft_dst + t, ft_src, ftail_rows, PARAM_f_tail(p)[t], ftab[t]);
+            if (PARAM_f_tail(p)[t] != 0) { // public: a zero tap adds nothing
+                m_gf16_mulc_xor(ft_dst + t, ft_src + src_off, ftail_rows, PARAM_f_tail(p)[t], ftab[t]);
+            }
         }
-        for (int i = 0; i < ftail_rows + F_TAIL_LEN - 1; i++) {
-            A[(i / 16) * A_width + c + (i % 16)] ^= ft_dst[i];
+        for (int b = 0; b < dst_words; b += 16) {
+            for (int i = 0; i < 16; i++) {
+                A[(size_t) (b / 16) * A_width + c + i] ^= ft_dst[b + i];
+            }
         }
     }
     mayo_secure_clear(ft_src, sizeof(ft_src));
     mayo_secure_clear(ft_dst, sizeof(ft_dst));
     #undef FTAIL_ROWS
+    #undef FT_BLOCKS
 
 #ifdef TARGET_BIG_ENDIAN
-    for (int i = 0; i < (((PARAM_o(p)*PARAM_k(p)+15)/16)*16)*MAYO_M_OVER_8; ++i) 
-        A[i] = BSWAP64(A[i]);
+    bswap_limbs(A, A_width * MAYO_M_OVER_8);
 #endif
 
 
@@ -226,21 +197,28 @@ static void compute_A(const mayo_params_t *p, uint64_t *VtL, unsigned char *A_ou
     for (int row = 0; row < PARAM_m(p); row++)
     {
         const size_t base = (size_t) (row & ~15) * A_width / 16 + (size_t) (row & 15);
-        for (int c = 0; c < PARAM_A_cols(p)-1 ; c+=16)
+        int c = 0;
+        for (; c + 16 <= PARAM_A_cols(p)-1; c += 16)
         {
-            decode( (unsigned char *) &A[base + c], A_out + PARAM_A_cols(p)*row + c, MAYO_MIN(16, PARAM_A_cols(p)-1-c));
+            decode16( (unsigned char *) &A[base + c], A_out + PARAM_A_cols(p)*row + c);
+        }
+        if (c < PARAM_A_cols(p)-1)
+        {
+            decode( (unsigned char *) &A[base + c], A_out + PARAM_A_cols(p)*row + c, PARAM_A_cols(p)-1-c);
         }
     }
+    mayo_secure_clear(A, sizeof(A));   /* M, shifted: secret */
 }
 
 static void unpack_m_vecs(const unsigned char *in, uint64_t *out, int vecs, int m){
     const int m_vec_limbs = (m + 15) / 16;
+    const size_t padded = m_vec_limbs * sizeof(uint64_t);
     unsigned char *_out = (unsigned char *) out;
-    uint64_t tmp[ (M_MAX + 15) / 16] = {0};
+    // back to front: in and out may be the same buffer, and out is the wider layout
     for (int i = vecs-1; i >= 0; i--)
     {
-        memcpy(tmp, in + i*m/2, m/2);
-        memcpy(_out + i*m_vec_limbs*sizeof(uint64_t), tmp, m_vec_limbs*sizeof(uint64_t));
+        memmove(_out + i*padded, in + i*m/2, m/2);
+        memset(_out + i*padded + m/2, 0, padded - m/2);
     }
 }
 /* ------------------------------------------------------------------ *
@@ -270,31 +248,34 @@ static void derive_lambda(const mayo_params_t *p, const unsigned char *seed,
     const size_t nbytes = (size_t) param_n * (size_t) param_m / 2;
     unsigned char *ks = (unsigned char *) lambda;   /* expanded in place, then unpacked */
 
-    unsigned char in[16 * 64], out[16 * 64];
+    /* whole blocks straight into lambda: the at most 15 bytes past nbytes land in its
+       MAYO_MVEC_SLACK tail, which the unpack rewrites and MAYO_ZERO_SLACK clears */
+    unsigned char in[16 * 256];
     const unsigned char *iv = seed + 16;
-    uint32_t ctr = 0;
+    for (size_t b = 0; b < 256; b++) {   /* the IV in every block; the counters vary below */
+        memcpy(in + 16 * b, iv, 16);
+    }
+    uint32_t iv_ctr, ctr = 0;
+    memcpy(&iv_ctr, iv + 12, 4);
     for (size_t done = 0; done < nbytes; ) {
         size_t nb = (nbytes - done + 15) / 16;
-        if (nb > 64) {
-            nb = 64;
+        if (nb > 256) {
+            nb = 256;
         }
-        for (size_t b = 0; b < nb; b++, ctr++) {
-            memcpy(in + 16 * b, iv, 16);
-            in[16 * b + 12] ^= (unsigned char) (ctr >> 24);
-            in[16 * b + 13] ^= (unsigned char) (ctr >> 16);
-            in[16 * b + 14] ^= (unsigned char) (ctr >> 8);
-            in[16 * b + 15] ^= (unsigned char) ctr;
+        for (size_t b = 0; b < nb; b++, ctr++) {   /* bytes 12..15: iv ^ the big-endian counter */
+#ifdef TARGET_BIG_ENDIAN
+            const uint32_t c = iv_ctr ^ ctr;
+#else
+            const uint32_t c = iv_ctr ^ BSWAP32(ctr);
+#endif
+            memcpy(in + 16 * b + 12, &c, 4);
         }
-        AES_128_ECB(out, in, nb, seed);
-        const size_t take = (nbytes - done < nb * 16) ? (nbytes - done) : nb * 16;
-        memcpy(ks + done, out, take);
-        done += take;
+        AES_128_ECB(ks + done, in, nb, seed);
+        done += 16 * nb;
     }
     unpack_m_vecs(ks, lambda, param_n, param_m);
 #ifdef TARGET_BIG_ENDIAN
-    for (size_t i = 0; i < (size_t) param_n * PARAM_m_vec_limbs(p); ++i) {
-        lambda[i] = BSWAP64(lambda[i]);
-    }
+    bswap_limbs(lambda, (size_t) param_n * PARAM_m_vec_limbs(p));
 #endif
     MAYO_ZERO_SLACK(lambda, (size_t) param_n * PARAM_m_vec_limbs(p));
 }
@@ -310,9 +291,7 @@ static void pack_m_vecs(const uint64_t *in, unsigned char *out, int vecs, int m)
 // Expand P1 and P2 into P. On the vector backends P1 stays in the packed keystream
 // layout (its readers use PINV) and P2 is spread out, unless keep_p2_packed.
 static void expand_P1_P2(const mayo_params_t *p, uint64_t *P, const unsigned char *seed_pk, int keep_p2_packed) {
-    #ifndef ENABLE_PARAMS_DYNAMIC
     (void) p;
-    #endif
     PK_PRF((unsigned char *)P, PARAM_P1_bytes(p) + PARAM_P2_bytes(p), seed_pk, PARAM_pk_seed_bytes(p));
     // m % 16 == 0: packed stride == padded stride, the keystream already is the layout.
     if (PARAM_m(p) % 16 == 0) {
@@ -329,7 +308,8 @@ static void expand_P1_P2(const mayo_params_t *p, uint64_t *P, const unsigned cha
 #endif
 }
 
-static void eval_public_map(const mayo_params_t *p, const unsigned char *s, const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, const uint64_t *lambda, unsigned char *eval){
+// eval = t - P*(s), with t nibble-packed (see compute_rhs)
+static void eval_public_map(const mayo_params_t *p, const unsigned char *s, const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, const uint64_t *lambda, const unsigned char *t, unsigned char *eval){
     alignas(64) uint64_t SPS[K_MAX * K_MAX * M_VEC_LIMBS_MAX + MAYO_MVEC_SLACK];
     MAYO_ZERO_SLACK(SPS, PARAM_k(p) * PARAM_k(p) * PARAM_m_vec_limbs(p));
     MAYO_ACC_INIT(SPS); // the products below accumulate into it
@@ -339,8 +319,7 @@ static void eval_public_map(const mayo_params_t *p, const unsigned char *s, cons
        compute_rhs weights by E_i0 along with everything else. */
     m_calculate_PS_SPS(p, P1, P2, P3, s, lambda, SPS);
 
-    unsigned char zero[M_MAX] = {0};
-    compute_rhs(p, SPS, zero, eval);
+    compute_rhs(p, SPS, t, eval);
 }
 
 // Public API
@@ -378,24 +357,23 @@ static int expand_sk_internal(const mayo_params_t *p, const unsigned char *csk,
 
     expand_P1_P2(p, P, seed_pk, 0);
     MAYO_ZERO_SLACK(P, PARAM_P1_limbs(p) + PARAM_P2_limbs(p));
-#ifdef TARGET_BIG_ENDIAN
-    for (int i = 0; i < PARAM_P1_limbs(p) + PARAM_P2_limbs(p); ++i) {
-        P[i] = BSWAP64(P[i]);
-    }
-#endif
-
     if (materialize_l) {
         uint64_t *P2 = P + PARAM_P1_limbs(p);
         uint64_t *P1 = P;
 
-        // compute L_i = (P1 + P1^t) * O + P2
+        // compute L_i = (P1 + P1^t) * O + P2, on native-order limbs
+#ifdef TARGET_BIG_ENDIAN
+        bswap_limbs(P, PARAM_P1_limbs(p) + PARAM_P2_limbs(p));
+#endif
         uint64_t *L = P2;
         P1P1t_times_O(p, P1, O, L);
-    }
-
 #ifdef TARGET_BIG_ENDIAN
-    for (int i = 0; i < PARAM_P1_limbs(p) + PARAM_P2_limbs(p); ++i) {
-        P[i] = BSWAP64(P[i]);
+        bswap_limbs(P, PARAM_P1_limbs(p) + PARAM_P2_limbs(p));
+#endif
+    }
+#ifdef MAYO_SIGN_HALF_L
+    else { // the fused sign keeps L implicit, from L' = P1 * O + P2
+        compute_L_half(P, P + PARAM_P1_limbs(p), O);
     }
 #endif
 
@@ -413,13 +391,13 @@ static int sign_signature_internal(const mayo_params_t *p, unsigned char *sig,
               size_t *siglen, const unsigned char *m,
               size_t mlen, const sk_t *sk, int use_l) {
     int ret = MAYO_OK;
-    unsigned char tenc[M_BYTES_MAX + MAYO_LAMBDA_SEED_BYTES], t[M_MAX]; // no secret data
+    unsigned char tenc[M_BYTES_MAX + MAYO_LAMBDA_SEED_BYTES]; // t, nibble-packed, then the lambda seed; no secret data
     alignas(32) uint64_t lambda[N_MAX * M_VEC_LIMBS_MAX + MAYO_MVEC_SLACK];
     unsigned char y[M_MAX];                    // secret data
     unsigned char salt[SALT_BYTES_MAX];        // not secret data
     unsigned char V[K_MAX * V_BYTES_MAX + R_BYTES_MAX], Vdec[V_MAX * K_MAX];                 // secret data
     unsigned char A[((M_MAX+7)/8*8) * (K_MAX * O_MAX + 1) + 32] = { 0 };   // secret data
-    unsigned char x[K_MAX * N_MAX];                       // not secret data
+    unsigned char x[K_MAX * N_MAX];                       // secret until it is the solution
     unsigned char r[K_MAX * O_MAX + 1] = { 0 };           // secret data
     unsigned char s[K_MAX * N_MAX];                       // not secret data
     const unsigned char *seed_sk;
@@ -427,7 +405,6 @@ static int sign_signature_internal(const mayo_params_t *p, unsigned char *sig,
     unsigned char *ctrbyte;
     int sol_found = 0;
 
-    const int param_m = PARAM_m(p);
     const int param_n = PARAM_n(p);
     const int param_o = PARAM_o(p);
     const int param_k = PARAM_k(p);
@@ -436,7 +413,6 @@ static int sign_signature_internal(const mayo_params_t *p, unsigned char *sig,
     const int param_v_bytes = PARAM_v_bytes(p);
     const int param_r_bytes = PARAM_r_bytes(p);
     const int param_sig_bytes = PARAM_sig_bytes(p);
-    const int param_A_cols = PARAM_A_cols(p);
     const int param_digest_bytes = PARAM_digest_bytes(p);
     const int param_sk_seed_bytes = PARAM_sk_seed_bytes(p);
     const int param_salt_bytes = PARAM_salt_bytes(p);
@@ -453,12 +429,7 @@ static int sign_signature_internal(const mayo_params_t *p, unsigned char *sig,
     uint64_t Mtmp[K_MAX * O_MAX * M_VEC_LIMBS_MAX + MAYO_MVEC_SLACK] = {0};
 
 #ifdef TARGET_BIG_ENDIAN
-    for (int i = 0; i < PARAM_P1_limbs(p); ++i) {
-        P1[i] = BSWAP64(P1[i]);
-    }
-    for (int i = 0; i < PARAM_P2_limbs(p); ++i) {
-        P2_or_L[i] = BSWAP64(P2_or_L[i]);
-    }
+    bswap_limbs(P1, PARAM_P1_limbs(p) + PARAM_P2_limbs(p)); // P1 and P2_or_L are adjacent
 #endif
 
     // choose the randomizer
@@ -488,7 +459,6 @@ static int sign_signature_internal(const mayo_params_t *p, unsigned char *sig,
     shake256(tenc, param_m_bytes + MAYO_LAMBDA_SEED_BYTES, tmp,
              param_digest_bytes + param_salt_bytes);
 
-    decode(tenc, t, param_m); // may not be necessary
     derive_lambda(p, tenc + param_m_bytes, lambda);
 
     for (int ctr = 0; ctr <= 255; ++ctr) {
@@ -506,19 +476,12 @@ static int sign_signature_internal(const mayo_params_t *p, unsigned char *sig,
         m_calculate_M_and_VPV(p, P1, P2_or_L, sk->O, Vdec, lambda, use_l,
                               Mtmp, (uint64_t *) A);
 
-        compute_rhs(p, (uint64_t*) A, t, y);
+        compute_rhs(p, (uint64_t*) A, tenc, y);
         compute_A(p, Mtmp, A);
 
-        for (int i = 0; i < param_m; i++)
-        {
-            A[(1+i)*(param_k*param_o + 1) - 1] = 0;
-        }
+        decode(V + param_k * param_v_bytes, r, param_k * param_o);
 
-        decode(V + param_k * param_v_bytes, r,
-               param_k *
-               param_o);
-
-        if (sample_solution(p, A, y, r, x, param_k, param_o, param_m, param_A_cols)) {
+        if (sample_solution(p, A, y, r, x)) {
             sol_found = 1;
             break;
         } else {
@@ -540,12 +503,7 @@ static int sign_signature_internal(const mayo_params_t *p, unsigned char *sig,
 err:
 #ifdef TARGET_BIG_ENDIAN
     // convert the caller's key back
-    for (int i = 0; i < PARAM_P1_limbs(p); ++i) {
-        P1[i] = BSWAP64(P1[i]);
-    }
-    for (int i = 0; i < PARAM_P2_limbs(p); ++i) {
-        P2_or_L[i] = BSWAP64(P2_or_L[i]);
-    }
+    bswap_limbs(P1, PARAM_P1_limbs(p) + PARAM_P2_limbs(p));
 #endif
     mayo_secure_clear(V, sizeof(V));
     mayo_secure_clear(Vdec, sizeof(Vdec));
@@ -553,6 +511,8 @@ err:
     mayo_secure_clear(r, sizeof(r));
     mayo_secure_clear(tmp, sizeof(tmp));
     mayo_secure_clear(Mtmp, sizeof(Mtmp));
+    mayo_secure_clear(y, sizeof(y));
+    mayo_secure_clear(x, sizeof(x));   /* r of the last attempt if none succeeded */
     return ret;
 }
 
@@ -577,61 +537,58 @@ int mayo_sign_signature(const mayo_params_t *p, unsigned char *sig,
     if (ret == MAYO_OK) {
         ret = sign_signature_internal(p, sig, siglen, m, mlen, &sk, use_l);
     }
-    mayo_secure_clear(&sk, sizeof(sk_t));
+    // sk.p holds P1 and P2, expanded from the public seed; secret are O, the seed and,
+    // with MAYO_SIGN_HALF_L, the L' = P1 * O + P2 that replaced P2
+#ifdef MAYO_SIGN_HALF_L
+    mayo_secure_clear(sk.p + PARAM_P1_limbs(p), PARAM_P2_limbs(p) * sizeof(uint64_t));
+#endif
+    mayo_secure_clear(sk.O, sizeof(sk.O));
+    mayo_secure_clear(sk.sk_seed, sizeof(sk.sk_seed));
+    return ret;
+}
+
+/* Signed message sm = sig || m, signed with csk if it is given and with esk otherwise.
+   m is moved behind the signature first, so it may overlap sm. */
+static int sign_attached(const mayo_params_t *p, unsigned char *sm,
+                         size_t *smlen, const unsigned char *m, size_t mlen,
+                         const unsigned char *csk, const sk_t *esk) {
+    const int param_sig_bytes = PARAM_sig_bytes(p);
+    size_t siglen = param_sig_bytes;
+    memmove(sm + param_sig_bytes, m, mlen);
+    int ret = csk ? mayo_sign_signature(p, sm, &siglen, sm + param_sig_bytes, mlen, csk)
+                  : mayo_sign_signature_esk(p, sm, &siglen, sm + param_sig_bytes, mlen, esk);
+    if (ret != MAYO_OK || siglen != (size_t) param_sig_bytes) {
+        memset(sm, 0, siglen + mlen);
+        return ret;
+    }
+    *smlen = siglen + mlen;
     return ret;
 }
 
 int mayo_sign_esk(const mayo_params_t *p, unsigned char *sm,
                   size_t *smlen, const unsigned char *m,
                   size_t mlen, const sk_t *esk) {
-    int ret = MAYO_OK;
-    const int param_sig_bytes = PARAM_sig_bytes(p);
-    size_t siglen = param_sig_bytes;
-    memmove(sm + param_sig_bytes, m, mlen);
-    ret = mayo_sign_signature_esk(p, sm, &siglen, sm + param_sig_bytes, mlen, esk);
-    if (ret != MAYO_OK || siglen != (size_t)param_sig_bytes) {
-        memset(sm, 0, siglen + mlen);
-        goto err;
-    }
-    *smlen = siglen + mlen;
-err:
-    return ret;
+    return sign_attached(p, sm, smlen, m, mlen, NULL, esk);
 }
 
 int mayo_sign(const mayo_params_t *p, unsigned char *sm,
               size_t *smlen, const unsigned char *m,
               size_t mlen, const unsigned char *csk) {
-    int ret = MAYO_OK;
-    const int param_sig_bytes = PARAM_sig_bytes(p);
-    size_t siglen = param_sig_bytes;
-    memmove(sm + param_sig_bytes, m, mlen);
-    ret = mayo_sign_signature(p, sm, &siglen, sm + param_sig_bytes, mlen, csk);
-    if (ret != MAYO_OK || siglen != (size_t) param_sig_bytes){
-        memset(sm, 0, siglen + mlen);
-        goto err;
-    }
-
-    *smlen = siglen + mlen;
-err:
-    return ret;
+    return sign_attached(p, sm, smlen, m, mlen, csk, NULL);
 }
 
 int mayo_open(const mayo_params_t *p, unsigned char *m,
               size_t *mlen, const unsigned char *sm,
               size_t smlen, const unsigned char *pk) {
-    const int param_sig_bytes = PARAM_sig_bytes(p);
-    if (smlen < (size_t)param_sig_bytes) {
+    // reject a too short sm before the costly key expansion
+    if (smlen < (size_t) PARAM_sig_bytes(p)) {
         return MAYO_ERR;
     }
-    int result = mayo_verify(p, sm + param_sig_bytes, smlen - param_sig_bytes, sm,
-                             pk);
-
-    if (result == MAYO_OK) {
-        *mlen = smlen - param_sig_bytes;
-        memmove(m, sm + param_sig_bytes, *mlen);
+    alignas(64) uint64_t epk[P1_LIMBS_MAX + P2_LIMBS_MAX + P3_LIMBS_MAX + MAYO_MVEC_SLACK];
+    if (mayo_expand_pk(p, pk, epk) != MAYO_OK) {
+        return MAYO_ERR;
     }
-
-    return result;
+    return mayo_open_epk(p, m, mlen, sm, smlen, epk);
 }
 
 int mayo_keypair_compact(const mayo_params_t *p, unsigned char *cpk,
@@ -728,8 +685,7 @@ int mayo_verify_epk(const mayo_params_t *p, const unsigned char *m,
                     const uint64_t *epk) {
     unsigned char tEnc[M_BYTES_MAX + MAYO_LAMBDA_SEED_BYTES];
     alignas(32) uint64_t lambda[N_MAX * M_VEC_LIMBS_MAX + MAYO_MVEC_SLACK];
-    unsigned char t[M_MAX];
-    unsigned char y[2 * M_MAX] = {0}; // extra space for reduction mod f(X)
+    unsigned char y[M_MAX];
     unsigned char s[K_MAX * N_MAX];
     unsigned char tmp[DIGEST_BYTES_MAX + SALT_BYTES_MAX];
 
@@ -761,12 +717,7 @@ int mayo_verify_epk(const mayo_params_t *p, const unsigned char *m,
     P1 = pk_be;
     P2 = pk_be + PARAM_P1_limbs(p);
     P3 = pk_be + PARAM_P1_limbs(p) + PARAM_P2_limbs(p);
-    for (int i = 0; i < PARAM_P1_limbs(p); ++i)
-        pk_be[i] = BSWAP64(pk_be[i]);
-    for (int i = PARAM_P1_limbs(p); i < PARAM_P1_limbs(p) + PARAM_P2_limbs(p); ++i)
-        pk_be[i] = BSWAP64(pk_be[i]);
-    for (int i = PARAM_P1_limbs(p) + PARAM_P2_limbs(p); i < PARAM_P1_limbs(p) + PARAM_P2_limbs(p) + PARAM_P3_limbs(p); ++i)
-        pk_be[i] = BSWAP64(pk_be[i]);
+    bswap_limbs(pk_be, PARAM_P1_limbs(p) + PARAM_P2_limbs(p) + PARAM_P3_limbs(p));
 #endif
 
     // hash m
@@ -779,18 +730,19 @@ int mayo_verify_epk(const mayo_params_t *p, const unsigned char *m,
        the extra MAYO_LAMBDA_SEED_BYTES seed the lambda expansion. */
     shake256(tEnc, param_m_bytes + MAYO_LAMBDA_SEED_BYTES, tmp,
              param_digest_bytes + param_salt_bytes);
-    decode(tEnc, t, param_m);
     derive_lambda(p, tEnc + param_m_bytes, lambda);
 
     // decode s
     decode(sig, s, param_k * param_n);
 
-    eval_public_map(p, s, P1, P2, P3, lambda, y);
+    // the signature is good iff P*(s) = t, i.e. y = t - P*(s) is zero
+    eval_public_map(p, s, P1, P2, P3, lambda, tEnc, y);
 
-    if (memcmp(y, t, param_m) == 0) {
-        return MAYO_OK; // good signature
+    unsigned char diff = 0;
+    for (int i = 0; i < param_m; i++) {
+        diff |= y[i];
     }
-    return MAYO_ERR; // bad signature
+    return diff == 0 ? MAYO_OK : MAYO_ERR;
 }
 
 int mayo_open_epk(const mayo_params_t *p, unsigned char *m,

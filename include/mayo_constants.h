@@ -133,14 +133,12 @@
 #define MAYO_1_v 80
 #define MAYO_1_A_cols (MAYO_1_k * MAYO_1_o + 1)
 #define MAYO_1_k 10
-#define MAYO_1_q 16
 #define MAYO_1_m_bytes 40
 #define MAYO_1_O_bytes 320
 #define MAYO_1_v_bytes 40
 #define MAYO_1_r_bytes 40
 #define MAYO_1_P1_bytes 129600
 #define MAYO_1_P2_bytes 25600
-#define MAYO_1_P3_bytes 1440
 #define MAYO_1_csk_bytes 24
 #define MAYO_1_cpk_bytes 1456
 #define MAYO_1_sig_bytes 464
@@ -161,14 +159,12 @@
 #define MAYO_2_v 73
 #define MAYO_2_A_cols (MAYO_2_k * MAYO_2_o + 1)
 #define MAYO_2_k 5
-#define MAYO_2_q 16
 #define MAYO_2_m_bytes 32
 #define MAYO_2_O_bytes 475
 #define MAYO_2_v_bytes 37
 #define MAYO_2_r_bytes 33
 #define MAYO_2_P1_bytes 86432
 #define MAYO_2_P2_bytes 30368
-#define MAYO_2_P3_bytes 2912
 #define MAYO_2_csk_bytes 24
 #define MAYO_2_cpk_bytes 2928
 #define MAYO_2_sig_bytes 239
@@ -186,17 +182,15 @@
 #define MAYO_3_m 108
 #define MAYO_3_m_vec_limbs 7
 #define MAYO_3_o 10
-#define MAYO_3_v (MAYO_3_n - MAYO_3_o)
+#define MAYO_3_v 108
 #define MAYO_3_A_cols (MAYO_3_k * MAYO_3_o + 1)
 #define MAYO_3_k 11
-#define MAYO_3_q 16
 #define MAYO_3_m_bytes 54
 #define MAYO_3_O_bytes 540
 #define MAYO_3_v_bytes 54
 #define MAYO_3_r_bytes 55
 #define MAYO_3_P1_bytes 317844
 #define MAYO_3_P2_bytes 58320
-#define MAYO_3_P3_bytes 2970
 #define MAYO_3_csk_bytes 32
 #define MAYO_3_cpk_bytes 2986
 #define MAYO_3_sig_bytes 681
@@ -214,17 +208,15 @@
 #define MAYO_5_m 142
 #define MAYO_5_m_vec_limbs 9
 #define MAYO_5_o 12
-#define MAYO_5_v (MAYO_5_n - MAYO_5_o)
+#define MAYO_5_v 142
 #define MAYO_5_A_cols (MAYO_5_k * MAYO_5_o + 1)
 #define MAYO_5_k 12
-#define MAYO_5_q 16
 #define MAYO_5_m_bytes 71
 #define MAYO_5_O_bytes 852
 #define MAYO_5_v_bytes 71
 #define MAYO_5_r_bytes 72
 #define MAYO_5_P1_bytes 720863
 #define MAYO_5_P2_bytes 120984
-#define MAYO_5_P3_bytes 5538
 #define MAYO_5_csk_bytes 40
 #define MAYO_5_cpk_bytes 5554
 #define MAYO_5_sig_bytes 964
@@ -252,8 +244,10 @@
 #define MAYO_NAMESPACE(s) PARAM_NAME3(opt, s)
 #elif defined(MAYO_BUILD_TYPE_AVX2)
 #define MAYO_NAMESPACE(s) PARAM_NAME3(avx2, s)
-#elif defined(MAYO_BUILD_TYPE_GFNI)
-#define MAYO_NAMESPACE(s) PARAM_NAME3(gfni, s)
+#elif defined(MAYO_BUILD_TYPE_AVX2_GFNI)
+#define MAYO_NAMESPACE(s) PARAM_NAME3(avx2_gfni, s)
+#elif defined(MAYO_BUILD_TYPE_AVX512_GFNI)
+#define MAYO_NAMESPACE(s) PARAM_NAME3(avx512_gfni, s)
 #elif defined(MAYO_BUILD_TYPE_NEON)
 #define MAYO_NAMESPACE(s) PARAM_NAME3(neon, s)
 #else
@@ -269,7 +263,6 @@
 #define M_MAX 142
 #define O_MAX 13
 #define K_MAX 12
-#define Q_MAX 16
 #define PK_SEED_BYTES_MAX 16
 #define SK_SEED_BYTES_MAX 40
 #define SALT_BYTES_MAX 40
@@ -278,9 +271,6 @@
 #define O_BYTES_MAX 852
 #define V_BYTES_MAX 71
 #define R_BYTES_MAX 72
-#define P1_BYTES_MAX 720863
-#define P2_BYTES_MAX 120984
-#define P3_BYTES_MAX 5538
 #define SIG_BYTES_MAX 964
 #define CPK_BYTES_MAX 5554
 #define CSK_BYTES_MAX 40
@@ -293,14 +283,10 @@
 #define O_MAX PARAM_NAME(o)
 #define V_MAX PARAM_NAME(v)
 #define K_MAX PARAM_NAME(k)
-#define Q_MAX PARAM_NAME(q)
 #define M_BYTES_MAX PARAM_NAME(m_bytes)
 #define O_BYTES_MAX PARAM_NAME(O_bytes)
 #define V_BYTES_MAX PARAM_NAME(v_bytes)
 #define R_BYTES_MAX PARAM_NAME(r_bytes)
-#define P1_BYTES_MAX PARAM_NAME(P1_bytes)
-#define P2_BYTES_MAX PARAM_NAME(P2_bytes)
-#define P3_BYTES_MAX PARAM_NAME(P3_bytes)
 #define SIG_BYTES_MAX PARAM_NAME(sig_bytes)
 #define CSK_BYTES_MAX PARAM_NAME(csk_bytes)
 #define CPK_BYTES_MAX PARAM_NAME(cpk_bytes)
@@ -331,14 +317,12 @@
 #define PARAM_v(p) (p->n - p->o)
 #define PARAM_A_cols(p) (p->k * p->o + 1)
 #define PARAM_k(p) (p->k)
-#define PARAM_q(p) (p->q)
 #define PARAM_m_bytes(p) (p->m_bytes)
 #define PARAM_O_bytes(p) (p->O_bytes)
 #define PARAM_v_bytes(p) (p->v_bytes)
 #define PARAM_r_bytes(p) (p->r_bytes)
 #define PARAM_P1_bytes(p) (p->P1_bytes)
 #define PARAM_P2_bytes(p) (p->P2_bytes)
-#define PARAM_P3_bytes(p) (p->P3_bytes)
 #define PARAM_csk_bytes(p) (p->csk_bytes)
 #define PARAM_cpk_bytes(p) (p->cpk_bytes)
 #define PARAM_sig_bytes(p) (p->sig_bytes)
@@ -357,14 +341,12 @@
 #define PARAM_v(p) PARAM_NAME(v)
 #define PARAM_A_cols(p) PARAM_NAME(A_cols)
 #define PARAM_k(p) PARAM_NAME(k)
-#define PARAM_q(p) PARAM_NAME(q)
 #define PARAM_m_bytes(p) PARAM_NAME(m_bytes)
 #define PARAM_O_bytes(p) PARAM_NAME(O_bytes)
 #define PARAM_v_bytes(p) PARAM_NAME(v_bytes)
 #define PARAM_r_bytes(p) PARAM_NAME(r_bytes)
 #define PARAM_P1_bytes(p) PARAM_NAME(P1_bytes)
 #define PARAM_P2_bytes(p) PARAM_NAME(P2_bytes)
-#define PARAM_P3_bytes(p) PARAM_NAME(P3_bytes)
 #define PARAM_csk_bytes(p) PARAM_NAME(csk_bytes)
 #define PARAM_cpk_bytes(p) PARAM_NAME(cpk_bytes)
 #define PARAM_sig_bytes(p) PARAM_NAME(sig_bytes)
@@ -383,7 +365,6 @@ static const unsigned char whip_pos[] = PARAM_NAME(whip_pos);
 #define PARAM_P1_limbs(p) (PARAM_v(p)*(PARAM_v(p)+1)/2*PARAM_m_vec_limbs(p))
 #define PARAM_P2_limbs(p) (PARAM_v(p)*PARAM_o(p)*PARAM_m_vec_limbs(p))
 #define PARAM_P3_limbs(p) (PARAM_o(p)*(PARAM_o(p)+1)/2*PARAM_m_vec_limbs(p))
-#define PARAM_EPK_limbs(p) (PARAM_P1_limbs(p) + PARAM_P2_limbs(p) + PARAM_P3_limbs(p))
 
 #endif
 

@@ -12,10 +12,7 @@
 #endif
 
 void m_upper(const mayo_params_t* p, const uint64_t *in, uint64_t *out, int size) {
-    #ifndef ENABLE_PARAMS_DYNAMIC
     (void) p;
-    #endif
-    // Look into AVX2'ing this 
     const int m_vec_limbs = PARAM_m_vec_limbs(p);
     int m_vecs_stored = 0;
     for (int r = 0; r < size; r++) {
@@ -32,17 +29,16 @@ void m_upper(const mayo_params_t* p, const uint64_t *in, uint64_t *out, int size
 
 // sample a solution x to Ax = y, with r used as randomness
 // require:
-// - A is a matrix with m rows and k*o+1 collumns (values in the last collum are
+// - A is a matrix with m rows and A_cols = k*o+1 collumns (values in the last collum are
 // not important, they will be overwritten by y) in row major order
 // - y is a vector with m elements
 // - r and x are k*o bytes long
 // return: 1 on success, 0 on failure
 int sample_solution(const mayo_params_t *p, unsigned char *A,
                            const unsigned char *y, const unsigned char *r,
-                           unsigned char *x, int k, int o, int m, int A_cols) {
-    #ifdef MAYO_VARIANT
+                           unsigned char *x) {
     (void) p;
-    #endif
+    const int k = PARAM_k(p), o = PARAM_o(p), m = PARAM_m(p), A_cols = PARAM_A_cols(p);
 #if !(defined(MAYO_AVX) || defined(MAYO_NEON))
     unsigned char finished;
     int col_upper_bound;
@@ -57,20 +53,21 @@ int sample_solution(const mayo_params_t *p, unsigned char *A,
     // compute Ar;
     unsigned char Ar[M_MAX];
     for (int i = 0; i < m; i++) {
-        A[k * o + i * (k * o + 1)] = 0; // clear last col of A
+        A[k * o + i * A_cols] = 0; // clear last col of A
     }
 #if defined(MAYO_AVX) || defined(MAYO_NEON)
     EF_mat_vec_mul(A, r, Ar);
 #else
-    mat_mul(A, r, Ar, k * o + 1, m, 1);
+    mat_mul(A, r, Ar, A_cols, m, 1);
 #endif
 
     // move y - Ar to last column of matrix A
     for (int i = 0; i < m; i++) {
-        A[k * o + i * (k * o + 1)] = sub_f(y[i], Ar[i]);
+        A[k * o + i * A_cols] = sub_f(y[i], Ar[i]);
     }
+    mayo_secure_clear(Ar, sizeof(Ar));
 
-    EF(A, m, k * o + 1);
+    EF(A, m, A_cols);
 
     // check if last row of A (excluding the last entry of y) is zero
     unsigned char full_rank = 0;

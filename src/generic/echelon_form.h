@@ -9,9 +9,6 @@
 #include <mem.h>
 #include <arithmetic.h>
 
-#define MAYO_MAX(x, y) (((x) > (y)) ? (x) : (y))
-#define MAYO_MIN(x, y) (((x) < (y)) ? (x) : (y))
-
 static inline unsigned char
 m_extract_element(const uint64_t *in, int index) {
     const int leg = index / 16;
@@ -129,10 +126,10 @@ static inline void EF(unsigned char *A, int nrows, int ncols) {
         }
     }
 
-    mayo_secure_clear(temp, K_MAX * O_MAX + 1 + 15);
-    mayo_secure_clear(_pivot_row, (K_MAX * O_MAX + 1 + 15) / 16 * 8);
-    mayo_secure_clear(_pivot_row2, (K_MAX * O_MAX + 1 + 15) / 16 * 8);
-    mayo_secure_clear(packed_A, ((K_MAX * O_MAX + 1 + 15) / 16) * M_MAX * 8);
+    mayo_secure_clear(temp, sizeof(temp));
+    mayo_secure_clear(_pivot_row, sizeof(_pivot_row));
+    mayo_secure_clear(_pivot_row2, sizeof(_pivot_row2));
+    mayo_secure_clear(packed_A, sizeof(packed_A));
 }
 
 #endif
