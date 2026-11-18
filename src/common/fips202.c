@@ -539,6 +539,7 @@ static void keccak_absorb(uint64_t *s, uint32_t r, const uint8_t *m,
     for (i = 0; i < r / 8; ++i) {
         s[i] ^= load64(t + 8 * i);
     }
+    mayo_secure_clear(t, sizeof(t));   /* the input's tail: seed_sk, for the short inputs */
 }
 
 /*************************************************

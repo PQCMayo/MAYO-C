@@ -12,172 +12,52 @@
 #include <fips202.h>
 #include <aes_ctr.h>
 #include <simple_arithmetic.h>
+#include "test_util.h"
 
 #include <mayo.c>
 
 /* These tests exercise the quadratic map P* on its own -- its vanishing on the oil
    space, its homogeneity, and the linear system built from it -- so they pass a zero
-   lambda, which makes eval_public_map compute exactly P*(s). */
+   lambda and a zero t, which makes eval_public_map compute exactly P*(s). */
 static const uint64_t test_lambda_zero[N_MAX * M_VEC_LIMBS_MAX + MAYO_MVEC_SLACK] = {0};
+static const unsigned char test_t_zero[M_BYTES_MAX] = {0};
 
-#ifdef ENABLE_CT_TESTING
-#include <valgrind/memcheck.h>
-#endif
-#include <debug_bench_tools.h>
+/* A random oil space O and the public map for it, as key generation derives them:
+   P = P1 || P2, and P3_upper the upper-triangular form of P3. */
+static void derive_test_key(const mayo_params_t *p, unsigned char *O, uint64_t *P, uint64_t *P3_upper) {
+    unsigned char seed_sk[CSK_BYTES_MAX];
+    unsigned char S[PK_SEED_BYTES_MAX + O_BYTES_MAX];
+    uint64_t P2_copy[P2_LIMBS_MAX];
+    uint64_t P3[O_MAX * O_MAX * M_VEC_LIMBS_MAX] = {0};
 
-int test_mayo(const mayo_params_t *p) {
-    unsigned char _pk[CPK_BYTES_MAX + 1] = {0};  
-    unsigned char _sk[CSK_BYTES_MAX + 1] = {0};
-    unsigned char _sig[SIG_BYTES_MAX + 32 + 1] = {0};
-    unsigned char _msg[32+1] = { 0 };
+    randombytes(seed_sk, PARAM_sk_seed_bytes(p));
+    shake256(S, PARAM_pk_seed_bytes(p) + PARAM_O_bytes(p), seed_sk, PARAM_sk_seed_bytes(p));
+    decode(S + PARAM_pk_seed_bytes(p), O, PARAM_v(p) * PARAM_o(p));
 
-    // Enforce unaligned memory addresses
-    unsigned char *pk  = (unsigned char *) ((uintptr_t)_pk | (uintptr_t)1);
-    unsigned char *sk  = (unsigned char *) ((uintptr_t)_sk | (uintptr_t)1);
-    unsigned char *sig = (unsigned char *) ((uintptr_t)_sig | (uintptr_t)1);
-    unsigned char *msg = (unsigned char *) ((uintptr_t)_msg | (uintptr_t)1);
-
-    for (int i = 0; i < 32; i++)
-    {
-        msg[i] = i;
-    }
-
-    unsigned char seed[48] = { 0 };
-    size_t msglen = 32;
-
-    randombytes_init(seed, NULL, 256);
-
-    printf("Testing Keygen, Sign, Open: %s\n", PARAM_name(p));
-
-    int res = mayo_keypair(p, pk, sk);
-    if (res != MAYO_OK) {
-        res = -1;
-        printf("keygen failed!\n");
-        goto err;
-    }
-
-#ifdef ENABLE_CT_TESTING
-    VALGRIND_MAKE_MEM_DEFINED(pk, PARAM_cpk_bytes(p));
-#endif
-
-    size_t smlen = PARAM_sig_bytes(p) + 32;
-
-    res = mayo_sign(p, sig, &smlen, msg, 32, sk);
-    if (res != MAYO_OK) {
-        res = -1;
-        printf("sign failed!\n");
-        goto err;
-    }
-
-    /*
-    printf("pk: ");
-    print_hex(pk, PARAM_cpk_bytes(p), 40);
-    printf("sk: ");
-    print_hex(sk, PARAM_csk_bytes(p), 40);
-    printf("sm: ");
-    print_hex(sig, smlen, 40); */
-
-#ifdef ENABLE_CT_TESTING
-    VALGRIND_MAKE_MEM_DEFINED(sig, smlen);
-#endif
-
-    res = mayo_open(p, msg, &msglen, sig, smlen, pk);
-    if (res != MAYO_OK) {
-        res = -1;
-        printf("verify failed!\n");
-        goto err;
-    }
-
-    printf("verify success!\n");
-
-    sig[0] = ~sig[0];
-    res = mayo_open(p, msg, &msglen, sig, smlen, pk);
-    if (res != MAYO_ERR) {
-        res = -1;
-        printf("wrong signature still verified!\n");
-        goto err;
-    } else {
-        res = MAYO_OK;
-    }
-
-err:
-    return res;
-}
-
-static void print_hex(const unsigned char *hex, int len, int row_len) {
-    int ctr = 0;
-    printf("%4d:", ctr);
-    for (int i = 0; i < len;  ++i) {
-        if(i % row_len == 0 && i > 0){
-            ctr ++;
-            printf("\n%4d:", ctr);
-        }
-        printf("%2x", hex[i]);
-    }
-    printf("\n");
+    expand_P1_P2(p, P, S, 0);
+    memcpy(P2_copy, P + PARAM_P1_limbs(p), PARAM_P2_limbs(p) * sizeof(uint64_t));
+    compute_P3(p, P, P2_copy, O, P3);
+    m_upper(p, P3, P3_upper, PARAM_o(p));
 }
 
 // Evaluate public map at oil vector as sanity check
 int test_eval_oil(const mayo_params_t *p) {
 
     int ret = MAYO_OK;
-    unsigned char seed_sk[CSK_BYTES_MAX];
-    unsigned char S[PK_SEED_BYTES_MAX + O_BYTES_MAX];
     uint64_t P[P1_LIMBS_MAX + P2_LIMBS_MAX];
-    uint64_t P3[O_MAX * O_MAX * M_VEC_LIMBS_MAX] = {0};
 
-    unsigned char cpk[CPK_BYTES_MAX];
-
-    unsigned char *seed_pk;
     unsigned char O[V_MAX*O_MAX];
 
-    const int m_vec_limbs = PARAM_m_vec_limbs(p);
-    (void) m_vec_limbs;
     const int param_m = PARAM_m(p);
     const int param_k = PARAM_k(p);
     const int param_n = PARAM_n(p);
     const int param_v = PARAM_v(p);
     const int param_o = PARAM_o(p);
-    const int param_O_bytes = PARAM_O_bytes(p);
-    const int param_pk_seed_bytes = PARAM_pk_seed_bytes(p);
-    const int param_sk_seed_bytes = PARAM_sk_seed_bytes(p);
-
-    // seed_sk $←- B^(sk_seed bytes)
-    randombytes(seed_sk, param_sk_seed_bytes);
-
-    // S ← shake256(seedsk, pk seed bytes + O bytes)
-    shake256(S, param_pk_seed_bytes + param_O_bytes, seed_sk,
-             param_sk_seed_bytes);
-    // seed_pk ← s[0 : pk_seed_bytes]
-    seed_pk = S;
-
-    // o ← Decode_o(s[pk_seed_bytes : pk_seed_bytes + o_bytes])
-    decode(S + param_pk_seed_bytes, O, param_v * param_o);
-
-    //memset(O, 0, param_v*param_o);
-    //O[0] = 1;
-
-    expand_P1_P2(p, P, seed_pk, 0);
-
-    uint64_t *P1 = P;
-    uint64_t *P2 = P + PARAM_P1_limbs(p);
-
-    //memset(P1 + 8*5, 0, sizeof(uint64_t[PARAM_P1_limbs(p)-5]));
-    //memset(P2, 0, sizeof(uint64_t[PARAM_P2_limbs(p)]));
-
-    uint64_t P2_copy[P2_LIMBS_MAX];
-    memcpy(P2_copy, P2, PARAM_P2_limbs(p)*sizeof(uint64_t));
-
-    compute_P3(p, P1, P2_copy, O, P3);
-
-    // store seed_pk in cpk
-    memcpy(cpk, seed_pk, param_pk_seed_bytes);
 
     uint64_t P3_upper[P3_LIMBS_MAX];
-    memset(P3_upper, 1, PARAM_P3_limbs(p)*sizeof(int64_t));
-
-    // compute Upper(P3) and store in cpk
-    m_upper(p, P3, P3_upper, param_o);
+    derive_test_key(p, O, P, P3_upper);
+    uint64_t *P1 = P;
+    uint64_t *P2 = P + PARAM_P1_limbs(p);
 
     // sample s from O^k
     unsigned char s[N_MAX*K_MAX] = {0};
@@ -195,7 +75,7 @@ int test_eval_oil(const mayo_params_t *p) {
 
     // evaluate Public map at s
     unsigned char y[2*M_MAX] = {0};
-    eval_public_map(p, s, P1,P2,P3_upper, test_lambda_zero, y);
+    eval_public_map(p, s, P1,P2,P3_upper, test_lambda_zero, test_t_zero, y);
 
     for (int i = 0; i < param_m; i++)
     {
@@ -224,55 +104,18 @@ int test_eval_oil(const mayo_params_t *p) {
 int test_eval_quad(const mayo_params_t *p) {
 
     int ret = MAYO_OK;
-    unsigned char seed_sk[CSK_BYTES_MAX];
-    unsigned char S[PK_SEED_BYTES_MAX + O_BYTES_MAX];
     uint64_t P[P1_LIMBS_MAX + P2_LIMBS_MAX];
-    uint64_t P3[O_MAX * O_MAX * M_VEC_LIMBS_MAX] = {0};
 
-    unsigned char *seed_pk;
     unsigned char O[V_MAX*O_MAX];
-
-    const int m_vec_limbs = PARAM_m_vec_limbs(p);
-    (void) m_vec_limbs;
 
     const int param_m = PARAM_m(p);
     const int param_k = PARAM_k(p);
     const int param_n = PARAM_n(p);
-    const int param_v = PARAM_v(p);
-    const int param_o = PARAM_o(p);
-    const int param_O_bytes = PARAM_O_bytes(p);
-    const int param_pk_seed_bytes = PARAM_pk_seed_bytes(p);
-    const int param_sk_seed_bytes = PARAM_sk_seed_bytes(p);
-
-    // seed_sk $←- B^(sk_seed bytes)
-    randombytes(seed_sk, param_sk_seed_bytes);
-
-    // S ← shake256(seedsk, pk seed bytes + O bytes)
-    shake256(S, param_pk_seed_bytes + param_O_bytes, seed_sk,
-             param_sk_seed_bytes);
-    // seed_pk ← s[0 : pk_seed_bytes]
-    seed_pk = S;
-
-    // o ← Decode_o(s[pk_seed_bytes : pk_seed_bytes + o_bytes])
-    decode(S + param_pk_seed_bytes, O, param_v * param_o);
-
-    //memset(O, 0, param_v*param_o);
-    //O[1] = 1;
-
-    expand_P1_P2(p, P, seed_pk, 0);
-
-    uint64_t *P1 = P;
-    uint64_t *P2 = P + PARAM_P1_limbs(p);
-
-    uint64_t P2_copy[P2_LIMBS_MAX];
-    memcpy(P2_copy, P2, PARAM_P2_limbs(p)*sizeof(uint64_t));
-    compute_P3(p, P1, P2_copy, O, P3);
 
     uint64_t P3_upper[P3_LIMBS_MAX];
-    memset(P3_upper, 1, PARAM_P3_limbs(p)*sizeof(int64_t));
-
-    // compute Upper(P3) and store in cpk
-    m_upper(p, P3, P3_upper, param_o);
+    derive_test_key(p, O, P, P3_upper);
+    uint64_t *P1 = P;
+    uint64_t *P2 = P + PARAM_P1_limbs(p);
 
     // sample s 
     unsigned char s[N_MAX*K_MAX] = {0};
@@ -282,7 +125,7 @@ int test_eval_quad(const mayo_params_t *p) {
     }
 
     unsigned char y[2*M_MAX] = {0};
-    eval_public_map(p, s, P1,P2,P3_upper, test_lambda_zero, y);
+    eval_public_map(p, s, P1,P2,P3_upper, test_lambda_zero, test_t_zero, y);
 
     for (int i = 0; i < 16; i++)
     {
@@ -295,7 +138,7 @@ int test_eval_quad(const mayo_params_t *p) {
             ss[j] = mul_f(s[j], i);
         }
 
-        eval_public_map(p, ss, P1,P2,P3_upper, test_lambda_zero, yy);
+        eval_public_map(p, ss, P1,P2,P3_upper, test_lambda_zero, test_t_zero, yy);
         unsigned char i_sq = mul_f(i,i);
 
         for (int j = 0; j < param_m; j++)
@@ -333,53 +176,21 @@ int test_eval_quad(const mayo_params_t *p) {
 int test_A(const mayo_params_t *p) {
 
     int ret = MAYO_OK;
-    unsigned char seed_sk[CSK_BYTES_MAX];
-    unsigned char S[PK_SEED_BYTES_MAX + O_BYTES_MAX];
     uint64_t P[P1_LIMBS_MAX + P2_LIMBS_MAX];
-    uint64_t P3[O_MAX * O_MAX * M_VEC_LIMBS_MAX] = {0};
 
-    unsigned char *seed_pk;
     unsigned char O[V_MAX*O_MAX];
-
-    const int m_vec_limbs = PARAM_m_vec_limbs(p);
-    (void) m_vec_limbs;
 
     const int param_m = PARAM_m(p);
     const int param_k = PARAM_k(p);
     const int param_n = PARAM_n(p);
     const int param_v = PARAM_v(p);
     const int param_o = PARAM_o(p);
-    const int param_O_bytes = PARAM_O_bytes(p);
-    const int param_pk_seed_bytes = PARAM_pk_seed_bytes(p);
-    const int param_sk_seed_bytes = PARAM_sk_seed_bytes(p);
     int solved = 0;
 
-    // seed_sk $←- B^(sk_seed bytes)
-    randombytes(seed_sk, param_sk_seed_bytes);
-
-    // S ← shake256(seedsk, pk seed bytes + O bytes)
-    shake256(S, param_pk_seed_bytes + param_O_bytes, seed_sk,
-             param_sk_seed_bytes);
-    // seed_pk ← s[0 : pk_seed_bytes]
-    seed_pk = S;
-
-    // o ← Decode_o(s[pk_seed_bytes : pk_seed_bytes + o_bytes])
-    decode(S + param_pk_seed_bytes, O, param_v * param_o);
-
-    expand_P1_P2(p, P, seed_pk, 0);
-
+    uint64_t P3_upper[P3_LIMBS_MAX];
+    derive_test_key(p, O, P, P3_upper);
     uint64_t *P1 = P;
     uint64_t *P2 = P + PARAM_P1_limbs(p);
-
-    uint64_t P2_copy[P2_LIMBS_MAX];
-    memcpy(P2_copy, P2, PARAM_P2_limbs(p)*sizeof(uint64_t));
-    compute_P3(p, P1, P2_copy, O, P3);
-
-    uint64_t P3_upper[P3_LIMBS_MAX];
-    memset(P3_upper, 1, PARAM_P3_limbs(p)*sizeof(int64_t));
-
-    // compute Upper(P3) and store in cpk
-    m_upper(p, P3, P3_upper, param_o);
 
     // compute L_i = (P1 + P1^t)*O + P2
     uint64_t L[P2_LIMBS_MAX] = {0};
@@ -420,7 +231,7 @@ int test_A(const mayo_params_t *p) {
         }
         
         unsigned char y_base[M_MAX] = {0};
-        eval_public_map(p, s_base, P1, P2, P3_upper, test_lambda_zero, y_base);
+        eval_public_map(p, s_base, P1, P2, P3_upper, test_lambda_zero, test_t_zero, y_base);
 
         for (int i = 0; i < param_k; i++)
         {
@@ -435,7 +246,7 @@ int test_A(const mayo_params_t *p) {
                 s[param_v + i*param_n + j] ^= 1;
 
                 unsigned char y[M_MAX] = {0};
-                eval_public_map(p, s, P1, P2, P3_upper, test_lambda_zero, y);
+                eval_public_map(p, s, P1, P2, P3_upper, test_lambda_zero, test_t_zero, y);
                 
                 for (int k = 0; k < param_m; k++)
                 {
@@ -510,7 +321,7 @@ int test_A(const mayo_params_t *p) {
         unsigned char y[M_MAX] = {0};
         unsigned char y1[M_MAX] = {0};
         unsigned char y2[M_MAX] = {0};
-        eval_public_map(p, s, P1, P2, P3_upper, test_lambda_zero, y);
+        eval_public_map(p, s, P1, P2, P3_upper, test_lambda_zero, test_t_zero, y);
 
         // compute y_base + A*o
         memcpy(y1, y_base, param_m);
@@ -557,7 +368,7 @@ int test_A(const mayo_params_t *p) {
             tt[i] ^= y_base[i];
         }
         
-        solved = sample_solution(p, A1, tt, r, x, param_k, param_o, param_m, param_k*param_o + 1);
+        solved = sample_solution(p, A1, tt, r, x);
     } while (!solved); 
 
     memcpy(s, s_base, param_n*param_k);
@@ -573,7 +384,7 @@ int test_A(const mayo_params_t *p) {
     }
 
     unsigned char eval[M_MAX] = {0};
-    eval_public_map(p, s, P1, P2, P3_upper, test_lambda_zero, eval);
+    eval_public_map(p, s, P1, P2, P3_upper, test_lambda_zero, test_t_zero, eval);
 
 
     if (memcmp(t, eval, param_m) != 0){
@@ -608,7 +419,6 @@ int test_sample_sol(const mayo_params_t *p) {
     unsigned char x[K_MAX * N_MAX] = {0};
     unsigned char r[K_MAX * O_MAX + 1] = {0};
 
-    const int cols = param_k*param_o + 1;
     int solved = 0;
     
     do {
@@ -628,7 +438,7 @@ int test_sample_sol(const mayo_params_t *p) {
             r[i] = rand() % 16;
         }
 
-        solved = sample_solution(p, A, y, r, x, param_k, param_o, param_m, cols);
+        solved = sample_solution(p, A, y, r, x);
     } while (!solved);
 
     unsigned char yy[M_MAX] = {0};
@@ -662,32 +472,17 @@ int main(int argc, char *argv[]) {
     srand(time(NULL));
 
     const mayo_params_t *p;
-
-#ifdef ENABLE_PARAMS_DYNAMIC
-    if (!strcmp(argv[1], "MAYO-1")) {
-        p = &MAYO_1;
-    } else if (!strcmp(argv[1], "MAYO-2")) {
-        p = &MAYO_2;
-    } else if (!strcmp(argv[1], "MAYO-3")) {
-        p = &MAYO_3;
-    } else if (!strcmp(argv[1], "MAYO-5")) {
-        p = &MAYO_5;
-    } else {
-        printf("unknown parameter set\n");
+    if (mayo_params_from_args(argc, argv, &p)) {
         return MAYO_ERR;
     }
-#else
-    p = NULL;
-#endif
 
-    rc ^= test_mayo(p);
-    rc ^= test_eval_oil(p);
-    rc ^= test_eval_quad(p);
-    rc ^= test_A(p);
-    rc ^= test_sample_sol(p);
+    rc |= test_eval_oil(p);
+    rc |= test_eval_quad(p);
+    rc |= test_A(p);
+    rc |= test_sample_sol(p);
 
     if (rc != MAYO_OK) {
-        printf("test failed for %s\n", argv[1]);
+        printf("test failed\n");
     }
     return rc;
 }

@@ -16,7 +16,7 @@ jobs:
     #runs-on: [self-hosted, Linux, X64]
     strategy:
       matrix:
-        mayo_build_type: [ref, opt, avx2, gfni]
+        mayo_build_type: [ref, opt, avx2, avx2_gfni, avx512_gfni]
 
     steps:
     - uses: actions/checkout@v3

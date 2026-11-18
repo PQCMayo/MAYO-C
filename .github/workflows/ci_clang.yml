@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: CT-tests (clang, clang-14 and clang-18)
+name: CT-tests (clang, clang-18 and clang-20)
 
 # Controls when the workflow will run
 on:
@@ -24,7 +24,7 @@ jobs:
         matrix:
           clang_config: [CTOS, CTO0, CTO2, CTO3, CTOSNOVEC, CTO0NOVEC, CTO2NOVEC, CTO3NOVEC]
           # Note: valgrind seems buggy with CT01 and CT01NOVEC, we skip them
-          clang_version: [clang, clang-15, clang-18]
+          clang_version: [clang, clang-18, clang-20]
           mayo_build_type: [ref, opt, avx2]
 
 
@@ -37,7 +37,7 @@ jobs:
           python-version: "3.10"
 
       - name: Install dependencies
-        run: wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && wget https://apt.llvm.org/llvm.sh && sudo bash ./llvm.sh 18 && sudo apt update && sudo apt -y install build-essential valgrind cmake libboost-tools-dev libpthread-stubs0-dev libssl-dev clang-15 clang-18 clang gcc gcc-12
+        run: sudo apt update && sudo apt -y install build-essential valgrind cmake libboost-tools-dev libpthread-stubs0-dev libssl-dev clang-18 clang-20 clang gcc gcc-12
 
       - name: CT-Test (clang)
         run: |

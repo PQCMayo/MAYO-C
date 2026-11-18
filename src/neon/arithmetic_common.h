@@ -118,35 +118,20 @@ inline void mayo_Ot_rows_times_x(const unsigned char *OT, const unsigned char *x
     }
 }
 
+/* tables for the public k-by-cols matrix S (row-major) by lookup: entry K_OVER_2*c + r/2
+   holds S[r][c] and S[r+1][c] */
 static
-inline void mayo_S1_multabs(const unsigned char *S1, uint8x16_t *S1_multabs) {
+inline void mayo_S_multabs(const unsigned char *S, size_t cols, uint8x16_t *tabs) {
     size_t r;
-    for (size_t c = 0; c < V_MAX; c++)
+    for (size_t c = 0; c < cols; c++)
     {
         for (r = 0; r+1 < K_MAX; r+= 2)
         {
-            S1_multabs[K_OVER_2*c +  r/2] = *((uint8x16_t *)(mayo_gf16_mul + 16*S1[V_MAX*r + c]))
-                                          ^ (*((uint8x16_t *)(mayo_gf16_mul + 16*S1[V_MAX*(r+1) + c])) << 4);
+            tabs[K_OVER_2*c +  r/2] = *((uint8x16_t *)(mayo_gf16_mul + 16*S[cols*r + c]))
+                                    ^ (*((uint8x16_t *)(mayo_gf16_mul + 16*S[cols*(r+1) + c])) << 4);
         }
 #if K_MAX % 2 == 1
-        S1_multabs[K_OVER_2*c +  r/2] = *((uint8x16_t *)(mayo_gf16_mul + 16*S1[V_MAX*r + c]));
-#endif
-    }
-}
-
-static
-inline void mayo_S2_multabs(const unsigned char *S2, uint8x16_t *S2_multabs) {
-    // build multiplication tables
-    size_t r;
-    for (size_t c = 0; c < O_MAX; c++)
-    {
-        for (r = 0; r+1 < K_MAX; r+= 2)
-        {
-            S2_multabs[K_OVER_2*c +  r/2] = *((uint8x16_t *)(mayo_gf16_mul + 16*S2[O_MAX*r + c]))
-                                          ^ (*((uint8x16_t *)(mayo_gf16_mul + 16*S2[O_MAX*(r+1) + c])) << 4);
-        }
-#if K_MAX % 2 == 1
-        S2_multabs[K_OVER_2*c +  r/2] = *((uint8x16_t *)(mayo_gf16_mul + 16*S2[O_MAX*r + c])) ;
+        tabs[K_OVER_2*c +  r/2] = *((uint8x16_t *)(mayo_gf16_mul + 16*S[cols*r + c]));
 #endif
     }
 }

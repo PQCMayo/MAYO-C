@@ -6,7 +6,7 @@ import math
 
 DEFAULT_PARAMETERS = {
     "MAYO_1": {
-        "name": "mayo1",
+        "name": "MAYO_1",
         "n": 88,
         "m": 80,
         "o": 8,
@@ -18,7 +18,7 @@ DEFAULT_PARAMETERS = {
         "digest_bytes": 32
     },
     "MAYO_2": {
-        "name": "mayo2",
+        "name": "MAYO_2",
         "n": 86,
         "m": 64,
         "o": 13,
@@ -30,7 +30,7 @@ DEFAULT_PARAMETERS = {
         "digest_bytes": 32
     },
     "MAYO_3": {
-        "name": "mayo3",
+        "name": "MAYO_3",
         "n": 118,
         "m": 108,
         "o": 10,
@@ -42,7 +42,7 @@ DEFAULT_PARAMETERS = {
         "digest_bytes": 48
     },
     "MAYO_5": {
-        "name": "mayo5",
+        "name": "MAYO_5",
         "n": 154,
         "m": 142,
         "o": 12,
@@ -90,7 +90,6 @@ for param in DEFAULT_PARAMETERS:
     DEFAULT_PARAMETERS[param]["r_bytes"] = r_bytes
     DEFAULT_PARAMETERS[param]["P1_bytes"] = P1_bytes
     DEFAULT_PARAMETERS[param]["P2_bytes"] = P2_bytes
-    DEFAULT_PARAMETERS[param]["P3_bytes"] = P3_bytes
     DEFAULT_PARAMETERS[param]["sig_bytes"] = sig_bytes
     DEFAULT_PARAMETERS[param]["cpk_bytes"] = cpk_bytes
     DEFAULT_PARAMETERS[param]["csk_bytes"] = csk_bytes
@@ -101,6 +100,7 @@ for param in DEFAULT_PARAMETERS:
     DEFAULT_PARAMETERS[param]["digest_bytes"] = digest_bytes
     DEFAULT_PARAMETERS[param]["m_vec_limbs"] = m_vec_limbs
 
+    print("#define " + param + "_name \"" + DEFAULT_PARAMETERS[param]["name"] + "\"")
     print("#define " + param + "_n " + str(n))
     print("#define " + param + "_m " + str(m))
     print("#define " + param + "_m_vec_limbs " + str(m_vec_limbs))
@@ -108,27 +108,24 @@ for param in DEFAULT_PARAMETERS:
     print("#define " + param + "_v " + str(v))
     print("#define " + param + "_A_cols (" + param + "_k * " + param + "_o + 1)")
     print("#define " + param + "_k " + str(k))
-    print("#define " + param + "_q " + str(q))
     print("#define " + param + "_m_bytes " + str(m_bytes))
     print("#define " + param + "_O_bytes " + str(O_bytes))
     print("#define " + param + "_v_bytes " + str(v_bytes))
     print("#define " + param + "_r_bytes " + str(r_bytes))
     print("#define " + param + "_P1_bytes " + str(P1_bytes))
     print("#define " + param + "_P2_bytes " + str(P2_bytes))
-    print("#define " + param + "_P3_bytes " + str(P3_bytes))
     print("#define " + param + "_csk_bytes " + str(csk_bytes))
     print("#define " + param + "_cpk_bytes " + str(cpk_bytes))
     print("#define " + param + "_sig_bytes " + str(sig_bytes))
     print("#define " + param + "_f_tail F_TAIL_" + str(m))
     print("#define " + param + "_f_tail_arr f_tail_" + str(m))
+    print("#define " + param + "_whip_pos WHIP_POS_" + str(k))
+    print("#define " + param + "_whip_pos_arr whip_pos_" + str(k))
     print("#define " + param + "_salt_bytes " + str(salt_bytes))
     print("#define " + param + "_digest_bytes " + str(digest_bytes))
     print("#define " + param + "_pk_seed_bytes " + str(pk_seed_bytes))
     print("#define " + param + "_sk_seed_bytes " + str(sk_seed_bytes))
-
-
-
-    print("\n")
+    print("")
 
 maxvals = {}
 
@@ -138,4 +135,6 @@ for param in DEFAULT_PARAMETERS:
             maxvals[paramval] = DEFAULT_PARAMETERS[param][paramval]
 
 for max in maxvals:
+    if max in ("name", "q", "P1_bytes", "P2_bytes"):  # not a bound, or bounds nothing reads
+        continue
     print("#define " + max.upper() + "_MAX " + str(maxvals[max]))

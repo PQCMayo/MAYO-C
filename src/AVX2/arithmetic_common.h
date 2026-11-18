@@ -9,47 +9,48 @@
 
 #define K_OVER_2 ((K_MAX+1)/2)
 
-static const unsigned char __gf16_mulbase[128] __attribute__((aligned(32))) = {
-    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
-    0x00, 0x02, 0x04, 0x06, 0x08, 0x0a, 0x0c, 0x0e, 0x03, 0x01, 0x07, 0x05, 0x0b, 0x09, 0x0f, 0x0d, 0x00, 0x02, 0x04, 0x06, 0x08, 0x0a, 0x0c, 0x0e, 0x03, 0x01, 0x07, 0x05, 0x0b, 0x09, 0x0f, 0x0d,
-    0x00, 0x04, 0x08, 0x0c, 0x03, 0x07, 0x0b, 0x0f, 0x06, 0x02, 0x0e, 0x0a, 0x05, 0x01, 0x0d, 0x09, 0x00, 0x04, 0x08, 0x0c, 0x03, 0x07, 0x0b, 0x0f, 0x06, 0x02, 0x0e, 0x0a, 0x05, 0x01, 0x0d, 0x09,
-    0x00, 0x08, 0x03, 0x0b, 0x06, 0x0e, 0x05, 0x0d, 0x0c, 0x04, 0x0f, 0x07, 0x0a, 0x02, 0x09, 0x01, 0x00, 0x08, 0x03, 0x0b, 0x06, 0x0e, 0x05, 0x0d, 0x0c, 0x04, 0x0f, 0x07, 0x0a, 0x02, 0x09, 0x01
+/* GF(16) multiplication tables via discrete logs: i * b = alog[(log i + log b) mod 15].
+   log 0 is tabulated as 0xd0, so that a sum involving it, folded mod 15, stays in
+   [0x91, 0xcf] and has bit 7 set: vpshufb then gives 0, which is i * 0 = 0 * b. The
+   ordinary sums, at most 28, fold into [0, 14]. b only enters as shuffle data. */
+static const unsigned char mayo_gf16_log[32] __attribute__((aligned(32))) = {
+    0xd0, 0, 1, 4, 2, 8, 5, 10, 3, 14, 9, 7, 6, 13, 11, 12,
+    0xd0, 0, 1, 4, 2, 8, 5, 10, 3, 14, 9, 7, 6, 13, 11, 12
+};
+static const unsigned char mayo_gf16_alog[32] __attribute__((aligned(32))) = {
+    1, 2, 4, 8, 3, 6, 12, 11, 5, 10, 7, 14, 15, 13, 9, 0,
+    1, 2, 4, 8, 3, 6, 12, 11, 5, 10, 7, 14, 15, 13, 9, 0
 };
 
-//
-// generate multiplication table for '4-bit' variable 'b'. Taken from OV paper!
-//
+/* decode(m, mdec, 16): the 16 nibbles of a limb to one byte each, low nibble first */
+#define MAYO_HAVE_DECODE16 1
+static inline void decode16(const unsigned char *m, unsigned char *mdec) {
+    const __m128i x = _mm_loadl_epi64((const __m128i *) m), lo = _mm_set1_epi8(0x0f);
+    _mm_storeu_si128((__m128i *) mdec, _mm_unpacklo_epi8(_mm_and_si128(x, lo),
+                                                        _mm_and_si128(_mm_srli_epi16(x, 4), lo)));
+}
+
+/* table[i] = i * b per lane, with each lane of bb holding its b in every byte. b < 16
+   for every caller (decoded nibbles); vpshufb ignores index bits 4..6 anyway */
+static inline __m256i tbl32_gf16_multab2_bb( __m256i bb ) {
+    const __m256i logt = _mm256_load_si256((__m256i const *) mayo_gf16_log);
+    __m256i idx = _mm256_add_epi8(logt, _mm256_shuffle_epi8(logt, bb));
+    idx = _mm256_min_epu8(idx, _mm256_sub_epi8(idx, _mm256_set1_epi8(15)));
+    return _mm256_shuffle_epi8(_mm256_load_si256((__m256i const *) mayo_gf16_alog), idx);
+}
+
 static inline __m256i tbl32_gf16_multab2( uint8_t b ) {
-
-    __m256i bx = _mm256_set1_epi16( b & 0xf );
-    __m256i b1 = _mm256_srli_epi16( bx, 1 );
-
-    const __m256i tab0 = _mm256_load_si256((__m256i const *) (__gf16_mulbase + 32 * 0));
-    const __m256i tab1 = _mm256_load_si256((__m256i const *) (__gf16_mulbase + 32 * 1));
-    const __m256i tab2 = _mm256_load_si256((__m256i const *) (__gf16_mulbase + 32 * 2));
-    const __m256i tab3 = _mm256_load_si256((__m256i const *) (__gf16_mulbase + 32 * 3));
-
-    __m256i mask_1  = _mm256_set1_epi16(1);
-    __m256i mask_4  = _mm256_set1_epi16(4);
-    __m256i mask_0  = _mm256_setzero_si256();
-
-    return ( tab0 & _mm256_cmpgt_epi16( bx & mask_1, mask_0) )
-           ^ ( tab1 & _mm256_cmpgt_epi16( b1 & mask_1, mask_0) )
-           ^ ( tab2 & _mm256_cmpgt_epi16( bx & mask_4, mask_0) )
-           ^ ( tab3 & _mm256_cmpgt_epi16( b1 & mask_4, mask_0) );
+    return tbl32_gf16_multab2_bb(_mm256_set1_epi8((char) b));
 }
 
-static inline __m256i linear_transform_8x8_256b( __m256i tab_l, __m256i tab_h, __m256i v, __m256i mask_f ) {
-    return _mm256_shuffle_epi8(tab_l, v & mask_f)^_mm256_shuffle_epi8(tab_h, _mm256_srli_epi16(v, 4)&mask_f);
+// the table for b0 in lane 0 and for b1 in lane 1, for the price of one
+static inline __m256i tbl32_gf16_multab2_x2( uint8_t b0, uint8_t b1 ) {
+    const __m256i bb = _mm256_inserti128_si256(_mm256_castsi128_si256(_mm_set1_epi8((char) b0)),
+                                               _mm_set1_epi8((char) b1), 1);
+    return tbl32_gf16_multab2_bb(bb);
 }
 
-static inline __m256i gf16v_mul( __m256i a, uint8_t b ) {
-    __m256i multab_l = tbl32_gf16_multab2( b );
-    __m256i multab_h = _mm256_slli_epi16( multab_l, 4 );
-
-    return linear_transform_8x8_256b( multab_l, multab_h, a, _mm256_set1_epi8(0xf) );
-}
-
+#ifdef MAYO_GFNI
 // GF(16) mul-by-{1,2,4,8} matrices in vgf2p8affineqb encoding
 static const uint64_t mayo_gf16_gfni_base[4] = {
     0x0102040810204080ULL, 0x0809020480902040ULL,
@@ -65,7 +66,6 @@ static inline uint64_t mayo_gfni_tab(unsigned char a) {
 }
 
 
-#ifdef MAYO_GFNI
 static const uint64_t MAYO_GF16_TAB[16] = {
     0x0000000000000000ULL, 0x0102040810204080ULL,
     0x0809020480902040ULL, 0x090b060c90b060c0ULL,
@@ -77,6 +77,15 @@ static const uint64_t MAYO_GF16_TAB[16] = {
     0x0e03070fe03070f0ULL, 0x0f010307f0103070ULL,
 };
  
+/* clang 21's MemorySanitizer reports vpermt2q on initialized inputs, so MSan builds
+   take the vpshufb version below */
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+#define MAYO_MSAN 1
+#endif
+#endif
+
+#if defined(MAYO_GFNI_ZMM) && !defined(MAYO_MSAN)
 static inline void mayo_gfni_tab32(__m256i a, uint64_t *out) {
     const __m512i T0 = _mm512_loadu_si512((const __m512i *) MAYO_GF16_TAB);
     const __m512i T1 = _mm512_loadu_si512((const __m512i *) (MAYO_GF16_TAB + 8));
@@ -96,6 +105,39 @@ static inline void mayo_gfni_tab32(__m256i a, uint64_t *out) {
     _mm512_storeu_si512((__m512i *) (out + 16), _mm512_permutex2var_epi64(T0, i2, T1));
     _mm512_storeu_si512((__m512i *) (out + 24), _mm512_permutex2var_epi64(T0, i3, T1));
 }
+#else
+/* byte k of MAYO_GF16_TAB[i], k < 4. Bytes 4..7 of each matrix are bytes 0..3 shifted
+   down a nibble, so four vpshufb lookups and some unpacks build 16 matrices. */
+static const unsigned char mayo_gfni_tab_bytes[4][16] __attribute__((aligned(16))) = {
+    {0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0, 0x90, 0x10, 0xd0, 0x50, 0xb0, 0x30, 0xf0, 0x70},
+    {0x00, 0x40, 0x20, 0x60, 0x90, 0xd0, 0xb0, 0xf0, 0xc0, 0x80, 0xe0, 0xa0, 0x50, 0x10, 0x70, 0x30},
+    {0x00, 0x20, 0x90, 0xb0, 0xc0, 0xe0, 0x50, 0x70, 0x60, 0x40, 0xf0, 0xd0, 0xa0, 0x80, 0x30, 0x10},
+    {0x00, 0x10, 0x80, 0x90, 0x40, 0x50, 0xc0, 0xd0, 0x20, 0x30, 0xa0, 0xb0, 0x60, 0x70, 0xe0, 0xf0},
+};
+
+static inline void mayo_gfni_tab16(__m128i a, uint64_t *out) {
+    const __m128i lo = _mm_set1_epi8(0x0f);
+    a = _mm_and_si128(a, lo);
+    __m128i b[4];
+    for (int k = 0; k < 4; k++) {
+        b[k] = _mm_shuffle_epi8(_mm_load_si128((const __m128i *) mayo_gfni_tab_bytes[k]), a);
+    }
+    const __m128i w01l = _mm_unpacklo_epi8(b[0], b[1]), w01h = _mm_unpackhi_epi8(b[0], b[1]);
+    const __m128i w23l = _mm_unpacklo_epi8(b[2], b[3]), w23h = _mm_unpackhi_epi8(b[2], b[3]);
+    const __m128i d[4] = { _mm_unpacklo_epi16(w01l, w23l), _mm_unpackhi_epi16(w01l, w23l),
+                           _mm_unpacklo_epi16(w01h, w23h), _mm_unpackhi_epi16(w01h, w23h) };
+    for (int j = 0; j < 4; j++) {
+        const __m128i e = _mm_and_si128(_mm_srli_epi32(d[j], 4), lo);
+        _mm_storeu_si128((__m128i *) (out + 4 * j), _mm_unpacklo_epi32(d[j], e));
+        _mm_storeu_si128((__m128i *) (out + 4 * j + 2), _mm_unpackhi_epi32(d[j], e));
+    }
+}
+
+static inline void mayo_gfni_tab32(__m256i a, uint64_t *out) {
+    mayo_gfni_tab16(_mm256_castsi256_si128(a), out);
+    mayo_gfni_tab16(_mm256_extracti128_si256(a, 1), out + 16);
+}
+#endif
 
 // out[i] = mayo_gfni_tab(in[i]), i < n. The batch bound is taken up front: written as
 // "i + 32 <= n" the tail leaves i unbounded and gcc warns about the indexing.
@@ -113,18 +155,18 @@ static inline void mayo_gfni_tabs(const unsigned char *in, uint64_t *out, size_t
 #define O_AVX_ROUND_UP_ ((O_MAX + 1)/2*2)
 
 static 
-inline void mayo_O_multabs(const unsigned char *O, __m256i *O_multabs){
+inline void mayo_O_multabs(const unsigned char *O, __m128i *O_multabs){
     // build multiplication tables 
     for (size_t r = 0; r < V_MAX; r++)
     {
         size_t c = 0;
         for (; c + 1  < O_MAX; c+=2)
         {
-            O_multabs[O_AVX_ROUND_UP_/2*r + c/2] = tbl32_gf16_multab2(O[O_MAX*r + c]) ^ _mm256_slli_epi16(tbl32_gf16_multab2(O[O_MAX*r + c + 1]), 4);
+            O_multabs[O_AVX_ROUND_UP_/2*r + c/2] = _mm256_castsi256_si128(tbl32_gf16_multab2(O[O_MAX*r + c]) ^ _mm256_slli_epi16(tbl32_gf16_multab2(O[O_MAX*r + c + 1]), 4));
         }
 #if O_MAX % 2 == 1
         {
-            O_multabs[O_AVX_ROUND_UP_/2*r + c/2] = tbl32_gf16_multab2(O[O_MAX*r + c]);
+            O_multabs[O_AVX_ROUND_UP_/2*r + c/2] = _mm256_castsi256_si128(tbl32_gf16_multab2(O[O_MAX*r + c]));
         }
 #endif
     }
@@ -132,17 +174,17 @@ inline void mayo_O_multabs(const unsigned char *O, __m256i *O_multabs){
 
 
 static 
-inline void mayo_V_multabs(const unsigned char *V, __m256i *V_multabs){
+inline void mayo_V_multabs(const unsigned char *V, __m128i *V_multabs){
     // build multiplication tables 
     size_t r;
     for (size_t c = 0; c < V_MAX; c++)
     {
         for (r = 0; r+1 < K_MAX; r+= 2)
         {
-            V_multabs[K_OVER_2*c +  r/2] = tbl32_gf16_multab2(V[V_MAX*r + c]) ^ _mm256_slli_epi16(tbl32_gf16_multab2(V[V_MAX*(r+1) + c]), 4);
+            V_multabs[K_OVER_2*c +  r/2] = _mm256_castsi256_si128(tbl32_gf16_multab2(V[V_MAX*r + c]) ^ _mm256_slli_epi16(tbl32_gf16_multab2(V[V_MAX*(r+1) + c]), 4));
         }
 #if K_MAX % 2 == 1
-        V_multabs[K_OVER_2*c + r/2] = tbl32_gf16_multab2(V[V_MAX*r + c]);
+        V_multabs[K_OVER_2*c + r/2] = _mm256_castsi256_si128(tbl32_gf16_multab2(V[V_MAX*r + c]));
 #endif
     }
 }
@@ -203,35 +245,19 @@ static const unsigned char mayo_gf16_mul[512] __attribute__((aligned(32))) = {
     0x00,0x0f,0x0d,0x02,0x09,0x06,0x04,0x0b, 0x01,0x0e,0x0c,0x03,0x08,0x07,0x05,0x0a};
 
 
-static 
-inline void mayo_S1_multabs(const unsigned char *S1, __m256i *S1_multabs) {
+/* tables for the public k-by-cols matrix S (row-major) by lookup, laid out as
+   mayo_V_multabs: entry K_OVER_2*c + r/2 holds S[r][c] and S[r+1][c] */
+static inline void mayo_S_multabs(const unsigned char *S, size_t cols, __m128i *tabs) {
     size_t r;
-    for (size_t c = 0; c < V_MAX; c++)
+    for (size_t c = 0; c < cols; c++)
     {
         for (r = 0; r+1 < K_MAX; r+= 2)
         {
-            S1_multabs[K_OVER_2*c +  r/2] = _mm256_load_si256((__m256i *)(mayo_gf16_mul + 32*S1[V_MAX*r + c])) 
-                                          ^ _mm256_slli_epi16(_mm256_load_si256((__m256i *)(mayo_gf16_mul + 32*S1[V_MAX*(r+1) + c])), 4);
+            tabs[K_OVER_2*c +  r/2] = _mm_load_si128((const __m128i *)(mayo_gf16_mul + 32*S[cols*r + c]))
+                                    ^ _mm_slli_epi16(_mm_load_si128((const __m128i *)(mayo_gf16_mul + 32*S[cols*(r+1) + c])), 4);
         }
 #if K_MAX % 2 == 1
-        S1_multabs[K_OVER_2*c +  r/2] = _mm256_load_si256((__m256i *)(mayo_gf16_mul + 32*S1[V_MAX*r + c]));
-#endif
-    }
-}
-
-static 
-inline void mayo_S2_multabs(const unsigned char *S2, __m256i *S2_multabs) {
-    // build multiplication tables 
-    size_t r;
-    for (size_t c = 0; c < O_MAX; c++)
-    {
-        for (r = 0; r+1 < K_MAX; r+= 2)
-        {
-            S2_multabs[K_OVER_2*c +  r/2] = _mm256_load_si256((__m256i *)(mayo_gf16_mul + 32*S2[O_MAX*r + c])) 
-                                          ^ _mm256_slli_epi16(_mm256_load_si256((__m256i *)(mayo_gf16_mul + 32*S2[O_MAX*(r+1) + c])), 4);
-        }
-#if K_MAX % 2 == 1
-        S2_multabs[K_OVER_2*c +  r/2] = _mm256_load_si256((__m256i *)(mayo_gf16_mul + 32*S2[O_MAX*r + c])) ;
+        tabs[K_OVER_2*c +  r/2] = _mm_load_si128((const __m128i *)(mayo_gf16_mul + 32*S[cols*r + c]));
 #endif
     }
 }

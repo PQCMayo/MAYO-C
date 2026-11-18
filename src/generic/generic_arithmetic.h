@@ -5,11 +5,7 @@
 
 #include <simple_arithmetic.h>
 
-#ifdef ENABLE_PARAMS_DYNAMIC
-#include <arithmetic_dynamic.h>
-#else
-#include <arithmetic_fixed.h>
-#endif
+#include <m_vec_arithmetic.h>
 
 // multiplies m (possibly upper triangular) matrices with a single matrix and adds result to acc
 static inline
@@ -72,17 +68,13 @@ void mul_add_mat_x_m_mat(const int m_vec_limbs, const unsigned char *mat, const 
 
 static inline
 void P1_times_O(const mayo_params_t* p, const uint64_t* P1, const unsigned char* O, uint64_t* acc){
-    #ifndef ENABLE_PARAMS_DYNAMIC
     (void) p;
-    #endif
     mul_add_m_upper_triangular_mat_x_mat(PARAM_m_vec_limbs(p), P1, O, acc, PARAM_v(p), PARAM_v(p), PARAM_o(p), 1);
 }
 
 static inline
 void P1_times_Vt(const mayo_params_t* p, const uint64_t* P1, const unsigned char* V, uint64_t* acc){
-    #ifndef ENABLE_PARAMS_DYNAMIC
     (void) p;
-    #endif
     mul_add_m_upper_triangular_mat_x_mat_trans(PARAM_m_vec_limbs(p), P1, V, acc, PARAM_v(p), PARAM_v(p), PARAM_k(p), 1);
 }
 
@@ -162,40 +154,37 @@ static inline void mayo_generic_m_calculate_PS(const uint64_t *P1, const uint64_
     const int n = o + v;
     const int m_vec_limbs = (m + 15)/16;
 
-    uint64_t accumulator[16 * ((M_MAX+15)/16) * K_MAX * N_MAX] = {0};
-    int P1_used = 0;
-    for (int row = 0; row < v; row++) {
-        for (int j = row; j < v; j++) {
-            for (int col = 0; col < k; col++) {
-                m_vec_add(m_vec_limbs, P1 + (P1_used * m_vec_limbs), accumulator + ( (row * k + col) * 16 + S[col * n + j] )*m_vec_limbs);
+    /* the 16 bins of one row of PS at a time, so they stay in cache: the bins of
+       column col collect the m-vecs whose S entry is 0..15 */
+    uint64_t bins[16 * ((M_MAX+15)/16) * K_MAX];
+    int P1_used = 0, P3_used = 0;
+    for (int row = 0; row < n; row++) {
+        memset(bins, 0, sizeof(bins));
+        if (row < v) {
+            for (int j = row; j < v; j++) {
+                for (int col = 0; col < k; col++) {
+                    m_vec_add(m_vec_limbs, P1 + (P1_used * m_vec_limbs), bins + (col * 16 + S[col * n + j])*m_vec_limbs);
+                }
+                P1_used ++;
             }
-            P1_used ++;
+            for (int j = 0; j < o; j++) {
+                for (int col = 0; col < k; col++) {
+                    m_vec_add(m_vec_limbs, P2 + (row * o + j)*m_vec_limbs, bins + (col * 16 + S[(col * n) + j + v])* m_vec_limbs);
+                }
+            }
+        } else {
+            for (int j = row; j < n; j++) {
+                for (int col = 0; col < k; col++) {
+                    m_vec_add(m_vec_limbs, P3 + P3_used * m_vec_limbs, bins + (col * 16 + S[col * n + j])* m_vec_limbs);
+                }
+                P3_used ++;
+            }
         }
-
-        for (int j = 0; j < o; j++) {
-            for (int col = 0; col < k; col++) {
-                m_vec_add(m_vec_limbs, P2 + (row * o + j)*m_vec_limbs, accumulator + ( (row * k + col) * 16 + S[(col * n) + j + v] )* m_vec_limbs);
-            }
+        // multiply the bins out and add to PS
+        for (int col = 0; col < k; col++) {
+            m_vec_multiply_bins(m_vec_limbs, bins + col * 16 * m_vec_limbs, PS + (row * k + col) * m_vec_limbs);
         }
     }
-
-    int P3_used = 0;
-    for (int row = v; row < n; row++) {
-        for (int j = row; j < n; j++) {
-            for (int col = 0; col < k; col++) {
-                m_vec_add(m_vec_limbs, P3 + P3_used * m_vec_limbs, accumulator + ( (row * k + col) * 16 + S[col * n + j] )* m_vec_limbs );
-            }
-            P3_used ++;
-        }
-    }
-
-    // multiply stuff according to the bins of the accumulator and add to PS.
-    int i = 0;
-    while (i < n * k) {
-        m_vec_multiply_bins(m_vec_limbs, accumulator + i * 16 * m_vec_limbs, PS + i * m_vec_limbs);
-        i++;
-    }
-
 }
 
 // compute S * PS  = [ S1 S2 ] * [ P1*S1 + P2*S2 = P1 ] = [ S1*P1 + S2*P2 ]
@@ -224,9 +213,7 @@ static inline void mayo_generic_m_calculate_SPS(const uint64_t *PS, const unsign
 
 static inline
 void P1P1t_times_O(const mayo_params_t* p, const uint64_t* P1, const unsigned char* O, uint64_t* acc){
-    #ifndef ENABLE_PARAMS_DYNAMIC
     (void) p;
-    #endif
     const int param_o = PARAM_o(p);
     const int param_v = PARAM_v(p);
     const int m_vec_limbs = PARAM_m_vec_limbs(p);
@@ -262,14 +249,13 @@ void compute_M_and_VPV(const mayo_params_t* p, const unsigned char* Vdec, const 
     uint64_t Pv[V_MAX * K_MAX * M_VEC_LIMBS_MAX] = {0};
     P1_times_Vt(p, P1, Vdec, Pv);
     mul_add_mat_x_m_mat(PARAM_m_vec_limbs(p), Vdec, Pv, VP1V, param_k, param_v, param_k);
+    mayo_secure_clear(Pv, sizeof(Pv));
 }
 
 // M = ((P1 + P1^t) * V^t)^t * O = V * (P1 + P1^t) * O; W is v x k, O is v x o, M is k x o
 static inline
 void Wt_times_O(const mayo_params_t* p, const uint64_t* W, const unsigned char* O, uint64_t* M){
-    #ifndef ENABLE_PARAMS_DYNAMIC
     (void) p;
-    #endif
     const int param_v = PARAM_v(p);
     const int param_k = PARAM_k(p);
     const int param_o = PARAM_o(p);
@@ -326,6 +312,8 @@ void compute_M_and_VPV_implicit(const mayo_params_t* p, const unsigned char* Vde
 
     Wt_times_O(p, Pv, O, M);                                                     // M = V * (P1 + P1^t) * O
     mul_add_mat_x_m_mat(m_vec_limbs, Vdec, P2, M, param_k, param_v, param_o);    // M += V * P2
+    mayo_secure_clear(Pv, sizeof(Pv));
+    mayo_secure_clear(Pt, sizeof(Pt));
 }
 
 static inline
@@ -349,9 +337,7 @@ void compute_P3(const mayo_params_t* p, const uint64_t* P1, uint64_t *P2, const 
 static inline void m_calculate_PS_SPS(const mayo_params_t *p, const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, const unsigned char *s,
                                       const uint64_t *lambda, uint64_t *SPS) {
     // compute P * S^t = {(P1, P2), (0, P3)} * S^t = {(P1*S1 + P2*S2), (P3 * S2)}
-    #ifndef ENABLE_PARAMS_DYNAMIC
     (void) p;
-    #endif
     #if defined(HAVE_STACKEFFICIENT) || defined(PQM4)
     mayo_generic_m_calculate_PS_SPS(P1, P2, P3, s, PARAM_m(p), PARAM_v(p), PARAM_o(p), PARAM_k(p), lambda, SPS);
     #else

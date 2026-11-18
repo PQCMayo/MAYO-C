@@ -14,6 +14,7 @@ You are solely responsible for determining the appropriateness of using and dist
 #include <ctype.h>
 #include <randombytes.h>
 #include <mayo.h>
+#include "test_util.h"
 
 #define MAX_MARKER_LEN         50
 
@@ -28,31 +29,11 @@ static int      ReadHex(FILE *infile, unsigned char *A, int Length, char *str);
 static int      test_sig_kat(const mayo_params_t *p);
 
 int main(int argc, char *argv[]) {
-    int rc = 0;
-
-#ifdef ENABLE_PARAMS_DYNAMIC
-    if (argc < 2) {
-        printf("One argument needed\n");
-        rc = 1;
-        goto end;
-    }
-
-    if (!strcmp(argv[1], "MAYO-1")) {
-        rc = test_sig_kat(&MAYO_1);
-    } else if (!strcmp(argv[1], "MAYO-2")) {
-        rc = test_sig_kat(&MAYO_2);
-    } else if (!strcmp(argv[1], "MAYO-3")) {
-        rc = test_sig_kat(&MAYO_3);
-    } else if (!strcmp(argv[1], "MAYO-5")) {
-        rc = test_sig_kat(&MAYO_5);
-    } else {
+    const mayo_params_t *p;
+    if (mayo_params_from_args(argc, argv, &p)) {
         return -1;
     }
-end:
-#else
-    rc = test_sig_kat(0);
-#endif
-    return rc;
+    return test_sig_kat(p);
 }
 
 static int test_sig_kat(const mayo_params_t *p) {

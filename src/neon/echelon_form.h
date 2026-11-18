@@ -4,10 +4,8 @@
 #include <mem.h>
 #include <arm_neon.h>
 #include <stdint.h>
+#include <simple_arithmetic.h>
 
-
-#define MAYO_MAX(x, y) (((x) > (y)) ? (x) : (y))
-#define MAYO_MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 // constant-time GF(16) inverse a^14, via a data-oblivious table lookup (no blocker)
 static inline unsigned char inverse_f_ct(unsigned char a) {

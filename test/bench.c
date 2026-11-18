@@ -7,6 +7,7 @@
 #include <inttypes.h>
 
 #include "m1cycles.h"
+#include "test_util.h"
 
 #if (defined(TARGET_OS_UNIX) && (defined(TARGET_ARM) || defined(TARGET_ARM64)) || defined(TARGET_OTHER)) \
     || (!defined(TARGET_OS_MAC) && defined(TARGET_ARM64))
@@ -23,35 +24,21 @@ int main(int argc, char *argv[]) {
     setup_rdtsc();
 #endif
 
+    // dynamic parameters: bench MAYO-x <runs>; fixed parameters: bench <runs>
 #ifdef ENABLE_PARAMS_DYNAMIC
-    if (argc < 3) {
-        printf("Two arguments needed\n");
-        rc = 1;
-        goto end;
-    }
-    int runs = atoi(argv[2]);
-    if (!strcmp(argv[1], "MAYO-1")) {
-        rc = bench_sig(&MAYO_1, runs, 0);
-    } else if (!strcmp(argv[1], "MAYO-2")) {
-        rc = bench_sig(&MAYO_2, runs, 0);
-    } else if (!strcmp(argv[1], "MAYO-3")) {
-        rc = bench_sig(&MAYO_3, runs, 0);
-    } else if (!strcmp(argv[1], "MAYO-5")) {
-        rc = bench_sig(&MAYO_5, runs, 0);
-    }
+    const int runs_arg = 2;
 #else
-    if (argc < 2) {
-        printf("One argument needed\n");
-        rc = 1;
-        goto end;
-    }
-    int runs = atoi(argv[1]);
-    rc = bench_sig(0, runs, 0);
+    const int runs_arg = 1;
 #endif
-
-
-
-end:
+    if (argc <= runs_arg) {
+        printf("usage: %s%s <runs>\n", argv[0], runs_arg == 2 ? " MAYO-x" : "");
+        return 1;
+    }
+    const mayo_params_t *p;
+    if (mayo_params_from_args(argc, argv, &p)) {
+        return 1;
+    }
+    rc = bench_sig(p, atoi(argv[runs_arg]), 0);
     return rc;
 }
 
